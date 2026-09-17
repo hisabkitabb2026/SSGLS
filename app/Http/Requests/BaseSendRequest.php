@@ -1,0 +1,45 @@
+<?php
+
+namespace App\Http\Requests;
+
+use Illuminate\Foundation\Http\FormRequest;
+
+/**
+ * Base request for send-document endpoints (email with subject/body/recipients).
+ *
+ * Consolidates the common validation pattern across all send endpoints
+ * (SendInvoiceRequest, SendEstimatesRequest, SendPaymentRequest).
+ *
+ * Standard email fields:
+ *  - subject: required
+ *  - body: required
+ *  - from: required
+ *  - to: required
+ *  - cc: nullable
+ *  - bcc: nullable
+ */
+abstract class BaseSendRequest extends FormRequest
+{
+    /**
+     * Determine if the user is authorized to make this request.
+     */
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    /**
+     * Get the validation rules that apply to the request.
+     */
+    public function rules(): array
+    {
+        return [
+            'subject' => ['required'],
+            'body' => ['required'],
+            'from' => ['required'],
+            'to' => ['required'],
+            'cc' => ['nullable'],
+            'bcc' => ['nullable'],
+        ];
+    }
+}

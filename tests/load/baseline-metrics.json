@@ -1,0 +1,304 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "application": "InvoiceShelf",
+    "date_created": "2026-08-30",
+    "description": "Baseline performance metrics and SLOs for InvoiceShelf application"
+  },
+  "system_requirements": {
+    "cpu_cores": 8,
+    "memory_gb": 16,
+    "database": {
+      "type": "MySQL 8.0 / PostgreSQL 14 / SQLite",
+      "max_connections": 100,
+      "recommended_connections": 50
+    },
+    "redis": {
+      "version": "6.0+",
+      "memory_gb": 2
+    },
+    "php": {
+      "version": "8.4",
+      "memory_limit": "256M",
+      "execution_time": "30s"
+    }
+  },
+  "performance_targets": {
+    "response_times": {
+      "p50_ms": 100,
+      "p75_ms": 200,
+      "p95_ms": 500,
+      "p99_ms": 1000,
+      "max_ms": 5000
+    },
+    "error_rates": {
+      "acceptable": 0.1,
+      "warning": 0.5,
+      "critical": 5.0
+    },
+    "throughput": {
+      "minimum_rps": 100,
+      "warning_below_rps": 50,
+      "critical_below_rps": 10
+    },
+    "availability": {
+      "target_uptime_percent": 99.99,
+      "warning_below_percent": 99.0,
+      "critical_below_percent": 95.0
+    }
+  },
+  "endpoint_baselines": {
+    "authentication": {
+      "endpoint": "/api/v1/auth/login",
+      "method": "POST",
+      "expected_response_time_p95_ms": 200,
+      "success_rate_percent": 99.99,
+      "description": "User authentication"
+    },
+    "auth_check": {
+      "endpoint": "/api/v1/auth/check",
+      "method": "GET",
+      "expected_response_time_p95_ms": 100,
+      "success_rate_percent": 99.99,
+      "description": "Auth validation check"
+    },
+    "dashboard": {
+      "endpoint": "/api/v1/dashboard",
+      "method": "GET",
+      "expected_response_time_p95_ms": 1000,
+      "success_rate_percent": 99.9,
+      "description": "Dashboard metrics and overview"
+    },
+    "invoice_list": {
+      "endpoint": "/api/v1/invoices",
+      "method": "GET",
+      "expected_response_time_p95_ms": 800,
+      "success_rate_percent": 99.9,
+      "description": "List all invoices with pagination"
+    },
+    "invoice_create": {
+      "endpoint": "/api/v1/invoices",
+      "method": "POST",
+      "expected_response_time_p95_ms": 2000,
+      "success_rate_percent": 99.8,
+      "description": "Create new invoice"
+    },
+    "invoice_update": {
+      "endpoint": "/api/v1/invoices/{id}",
+      "method": "PUT",
+      "expected_response_time_p95_ms": 1500,
+      "success_rate_percent": 99.8,
+      "description": "Update existing invoice"
+    },
+    "invoice_delete": {
+      "endpoint": "/api/v1/invoices/{id}",
+      "method": "DELETE",
+      "expected_response_time_p95_ms": 1000,
+      "success_rate_percent": 99.9,
+      "description": "Delete invoice"
+    },
+    "customer_list": {
+      "endpoint": "/api/v1/customers",
+      "method": "GET",
+      "expected_response_time_p95_ms": 800,
+      "success_rate_percent": 99.9,
+      "description": "List all customers"
+    },
+    "customer_create": {
+      "endpoint": "/api/v1/customers",
+      "method": "POST",
+      "expected_response_time_p95_ms": 1000,
+      "success_rate_percent": 99.9,
+      "description": "Create new customer"
+    },
+    "items_list": {
+      "endpoint": "/api/v1/items",
+      "method": "GET",
+      "expected_response_time_p95_ms": 600,
+      "success_rate_percent": 99.9,
+      "description": "List all items/products"
+    },
+    "estimate_list": {
+      "endpoint": "/api/v1/estimates",
+      "method": "GET",
+      "expected_response_time_p95_ms": 800,
+      "success_rate_percent": 99.9,
+      "description": "List all estimates"
+    },
+    "estimate_create": {
+      "endpoint": "/api/v1/estimates",
+      "method": "POST",
+      "expected_response_time_p95_ms": 2000,
+      "success_rate_percent": 99.8,
+      "description": "Create new estimate"
+    },
+    "payment_list": {
+      "endpoint": "/api/v1/payments",
+      "method": "GET",
+      "expected_response_time_p95_ms": 800,
+      "success_rate_percent": 99.9,
+      "description": "List all payments"
+    },
+    "expense_list": {
+      "endpoint": "/api/v1/expenses",
+      "method": "GET",
+      "expected_response_time_p95_ms": 800,
+      "success_rate_percent": 99.9,
+      "description": "List all expenses"
+    },
+    "bootstrap": {
+      "endpoint": "/api/v1/bootstrap",
+      "method": "GET",
+      "expected_response_time_p95_ms": 1500,
+      "success_rate_percent": 99.9,
+      "description": "Initial app data load"
+    }
+  },
+  "database_baselines": {
+    "query_types": {
+      "select": {
+        "expected_time_ms": 50,
+        "warning_threshold_ms": 100,
+        "critical_threshold_ms": 500
+      },
+      "insert": {
+        "expected_time_ms": 20,
+        "warning_threshold_ms": 50,
+        "critical_threshold_ms": 200
+      },
+      "update": {
+        "expected_time_ms": 25,
+        "warning_threshold_ms": 75,
+        "critical_threshold_ms": 300
+      },
+      "delete": {
+        "expected_time_ms": 15,
+        "warning_threshold_ms": 50,
+        "critical_threshold_ms": 200
+      }
+    },
+    "connection_pool": {
+      "min_connections": 5,
+      "max_connections": 100,
+      "connection_timeout_ms": 30000,
+      "idle_timeout_ms": 900000
+    }
+  },
+  "cache_baselines": {
+    "redis": {
+      "key_lookup_ms": 1,
+      "set_operation_ms": 2,
+      "delete_operation_ms": 1,
+      "hit_rate_percent": 85
+    }
+  },
+  "load_test_targets": {
+    "baseline_test": {
+      "duration_minutes": 9,
+      "concurrent_users": 10,
+      "target_throughput_rps": 50,
+      "acceptable_error_rate_percent": 0.1,
+      "target_p95_response_time_ms": 500
+    },
+    "ramp_test": {
+      "duration_minutes": 10,
+      "max_concurrent_users": 1000,
+      "ramp_rate": "100_users_per_minute",
+      "target_throughput_rps": 1000,
+      "acceptable_error_rate_percent": 20,
+      "target_p95_response_time_ms": 2000
+    },
+    "stress_test": {
+      "duration_minutes": 14,
+      "max_concurrent_users": 5000,
+      "target": "break_the_system",
+      "expected_breaking_point_users": "1000_to_2000",
+      "acceptable_error_rate_percent": 50
+    },
+    "spike_test": {
+      "duration_minutes": 7,
+      "baseline_users": 100,
+      "spike_users": [500, 1000, 2000],
+      "spike_duration_seconds": 10,
+      "recovery_time_target_minutes": 1,
+      "acceptable_error_rate_percent": 30
+    },
+    "chaos_test": {
+      "duration_minutes": 14,
+      "concurrent_users": 50,
+      "scenarios": [
+        "latency_injection",
+        "db_pool_exhaustion",
+        "queue_backlog",
+        "intermittent_failures"
+      ],
+      "acceptable_recovery_rate_percent": 80
+    }
+  },
+  "alerting_thresholds": {
+    "response_time_alerts": {
+      "warning": {
+        "p95_exceeds_ms": 1000,
+        "p99_exceeds_ms": 2000
+      },
+      "critical": {
+        "p95_exceeds_ms": 2000,
+        "p99_exceeds_ms": 5000
+      }
+    },
+    "error_rate_alerts": {
+      "warning": {
+        "percent": 0.5
+      },
+      "critical": {
+        "percent": 5
+      }
+    },
+    "throughput_alerts": {
+      "warning": {
+        "below_rps": 50
+      },
+      "critical": {
+        "below_rps": 10
+      }
+    },
+    "database_alerts": {
+      "slow_query_threshold_ms": 100,
+      "connection_pool_usage_percent": 80,
+      "replication_lag_seconds": 5
+    },
+    "cache_alerts": {
+      "redis_memory_usage_percent": 80,
+      "key_eviction_rate": 100,
+      "hit_rate_below_percent": 70
+    }
+  },
+  "capacity_planning": {
+    "current_capacity": {
+      "users": 1000,
+      "transactions_per_day": 10000,
+      "data_storage_gb": 100
+    },
+    "growth_projections": {
+      "year_1_users": 2000,
+      "year_1_transactions_per_day": 25000,
+      "year_2_users": 5000,
+      "year_2_transactions_per_day": 75000
+    },
+    "infrastructure_recommendations": {
+      "single_server": {
+        "cpu_cores": 8,
+        "memory_gb": 16,
+        "disk_gb": 500,
+        "max_concurrent_users": 500
+      },
+      "clustered": {
+        "app_servers": 3,
+        "database_primary": 1,
+        "database_replicas": 2,
+        "cache_nodes": 3,
+        "max_concurrent_users": 5000
+      }
+    }
+  }
+}

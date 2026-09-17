@@ -1,0 +1,67 @@
+/Modules
+/node_modules
+/public/storage
+/public/hot
+/public/build
+/storage/*.key
+/vendor
+/.idea
+Homestead.json
+Homestead.yaml
+.env
+.phpunit.result.cache
+.phpunit.cache/
+.rnd
+/.expo
+/.vscode
+/.devcontainer
+.gitkeep
+/public/docs
+/.scribe
+!storage/fonts/.gitkeep
+.DS_Store
+.php-cs-fixer.cache
+.devenvconfig
+/storage/fonts*
+package-lock.json
+yarn.lock
+/docker/development/docker-compose.yml
+/docker/production/docker-compose.yml
+/docker-compose.yaml
+
+# Agent docs: AGENTS.md is the canonical, committed source of truth.
+# The per-tool files are local symlinks to it — `composer run ai-docs` creates them.
+/CLAUDE.md
+/GEMINI.md
+/.github/copilot-instructions.md
+/.cursor/
+/.claude/settings.local.json
+\
+
+# Environment & Secrets
+.env
+.env.backup
+.env.local
+
+# Logs & DBs
+*.log
+*.sqlite
+*.sqlite-journal
+
+# Scratch / Temporary files
+*.patch
+*.diff
+ssgls_*.txt
+eslint_output.txt
+check_db.php
+fix_db.php
+composer-setup.php
+readm_backupe.md
+
+# IDE & Tooling
+.claude/
+.gemini/
+
+# OS files
+Thumbs.db
+Desktop.ini

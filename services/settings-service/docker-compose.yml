@@ -1,0 +1,140 @@
+version: '3.8'
+
+services:
+  settings-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: settings-service
+    ports:
+      - "8005:8005"
+      - "9090:9090"
+    environment:
+      PORT: 8005
+      ENVIRONMENT: development
+      DEBUG: "true"
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: settings_user
+      DB_PASSWORD: settings_password
+      DB_NAME: settings_db
+      DB_SSL_MODE: disable
+      JWT_SECRET: your-super-secret-key-change-in-production
+      JWT_EXPIRY: 3600
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASS: guest
+      LOG_LEVEL: debug
+      METRICS_PORT: 9090
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - settings-network
+    restart: unless-stopped
+    volumes:
+      - ./logs:/root/logs
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: settings-postgres
+    environment:
+      POSTGRES_USER: settings_user
+      POSTGRES_PASSWORD: settings_password
+      POSTGRES_DB: settings_db
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d
+    networks:
+      - settings-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U settings_user -d settings_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    container_name: settings-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+      RABBITMQ_DEFAULT_VHOST: /
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+      - ./rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+    networks:
+      - settings-network
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: settings-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    networks:
+      - settings-network
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: settings-prometheus
+    ports:
+      - "9091:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+    networks:
+      - settings-network
+    depends_on:
+      - settings-service
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: settings-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_SECURITY_ADMIN_USER: admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - settings-network
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  rabbitmq_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  settings-network:
+    driver: bridge

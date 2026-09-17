@@ -1,0 +1,39 @@
+# Redis service configuration for docker-compose.yml
+# This should be added to your existing docker-compose.yml file
+
+  redis:
+    image: redis:7-alpine
+    container_name: invoiceshelf-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    environment:
+      - REDIS_REPLICATION_MODE=master
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+      --save 900 1
+      --save 300 10
+      --save 60 10000
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - invoiceshelf
+
+volumes:
+  redis_data:
+    driver: local
+
+# Integration instructions:
+# 1. Copy the redis service block above into your existing docker-compose.yml
+# 2. Ensure the networks section includes 'invoiceshelf' network
+# 3. Ensure the volumes section is present
+# 4. Run: docker-compose up -d redis
+# 5. Verify: docker-compose logs redis

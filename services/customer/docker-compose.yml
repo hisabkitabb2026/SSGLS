@@ -1,0 +1,116 @@
+version: '3.9'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: customer-service-postgres
+    environment:
+      POSTGRES_USER: customer_user
+      POSTGRES_PASSWORD: secure_password
+      POSTGRES_DB: customer_service
+      TZ: UTC
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U customer_user -d customer_service"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - customer-service-network
+
+  # RabbitMQ Message Broker
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    container_name: customer-service-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+      RABBITMQ_DEFAULT_VHOST: /
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - customer-service-network
+
+  # Customer Service
+  customer-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: customer-service-app
+    environment:
+      NODE_ENV: development
+      PORT: 8004
+      SERVICE_NAME: customer-service
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: customer_service
+      DB_USERNAME: customer_user
+      DB_PASSWORD: secure_password
+      DB_POOL_MIN: 2
+      DB_POOL_MAX: 10
+      DB_SSL: "false"
+      JWT_SECRET: your_super_secret_jwt_key_change_in_production
+      JWT_EXPIRY: 7d
+      JWT_REFRESH_SECRET: your_super_secret_refresh_key
+      JWT_REFRESH_EXPIRY: 30d
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USERNAME: guest
+      RABBITMQ_PASSWORD: guest
+      RABBITMQ_VHOST: /
+      RABBITMQ_QUEUE_CUSTOMER_EVENTS: customer.events
+      RABBITMQ_EXCHANGE_CUSTOMERS: customers
+      LOG_LEVEL: info
+      LOG_FORMAT: json
+      METRICS_ENABLED: "true"
+      METRICS_PORT: 9090
+      HEALTH_CHECK_INTERVAL: 30000
+      TZ: UTC
+    ports:
+      - "8004:8004"
+      - "9090:9090"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    volumes:
+      - ./src:/app/src
+      - /app/node_modules
+    networks:
+      - customer-service-network
+    restart: unless-stopped
+
+  # Adminer for database management (optional)
+  adminer:
+    image: adminer:latest
+    container_name: customer-service-adminer
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+    networks:
+      - customer-service-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+  rabbitmq_data:
+    driver: local
+
+networks:
+  customer-service-network:
+    driver: bridge

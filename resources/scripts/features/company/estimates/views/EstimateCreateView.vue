@@ -1,0 +1,300 @@
+<template>
+  <SelectTemplateModal />
+  <ItemModal />
+  <TaxTypeModal />
+  <SalesTax
+    v-if="salesTaxEnabled && (!isLoadingContent || route.query.customer)"
+    :store="estimateStore"
+    store-prop="newEstimate"
+    :is-edit="isEdit"
+    :customer="estimateStore.newEstimate.customer"
+  />
+
+  <BasePage class="relative estimate-create-page">
+    <form @submit.prevent="submitForm">
+      <BasePageHeader :title="pageTitle">
+        <BaseBreadcrumb>
+          <BaseBreadcrumbItem :title="$t('general.home')" to="/admin/dashboard" />
+          <BaseBreadcrumbItem
+            :title="$t('estimates.estimate', 2)"
+            to="/admin/estimates"
+          />
+          <BaseBreadcrumbItem
+            v-if="isEdit"
+            :title="$t('estimates.edit_estimate')"
+            to="#"
+            active
+          />
+          <BaseBreadcrumbItem v-else :title="$t('estimates.new_estimate')" to="#" active />
+        </BaseBreadcrumb>
+
+        <template #actions>
+          <router-link
+            v-if="isEdit"
+            :to="`/estimates/pdf/${estimateStore.newEstimate.unique_hash}`"
+            target="_blank"
+          >
+            <BaseButton class="mr-3" variant="primary-outline" type="button">
+              <span class="flex">
+                {{ $t('general.view_pdf') }}
+              </span>
+            </BaseButton>
+          </router-link>
+
+          <BaseButton
+            :loading="isSaving"
+            :disabled="isSaving"
+            :content-loading="isLoadingContent"
+            variant="primary"
+            type="submit"
+          >
+            <template #left="slotProps">
+              <BaseIcon
+                v-if="!isSaving"
+                :class="slotProps.class"
+                name="ArrowDownOnSquareIcon"
+              />
+            </template>
+            {{ $t('estimates.save_estimate') }}
+          </BaseButton>
+        </template>
+      </BasePageHeader>
+
+      <!-- Select Customer & Basic Fields -->
+      <EstimateBasicFields
+        :v="v$"
+        :is-loading="isLoadingContent"
+        :is-edit="isEdit"
+      />
+
+      <BaseScrollPane>
+        <!-- Estimate Items -->
+        <CreateItems
+          :currency="estimateStore.newEstimate.selectedCurrency"
+          :is-loading="isLoadingContent"
+          :item-validation-scope="estimateValidationScope"
+          :store="estimateStore"
+          store-prop="newEstimate"
+        />
+
+        <!-- Estimate Footer Section -->
+        <div
+          class="
+            block
+            mt-10
+            estimate-foot
+            lg:flex lg:justify-between lg:items-start
+          "
+        >
+          <div class="relative w-full lg:w-1/2">
+            <!-- Estimate Custom Notes -->
+            <CreateNotesField
+              :store="estimateStore"
+              store-prop="newEstimate"
+              :fields="estimateNoteFieldList"
+              type="Estimate"
+            />
+
+            <!-- Estimate Custom Fields -->
+            <CreateCustomFields
+              type="Estimate"
+              :is-edit="isEdit"
+              :is-loading="isLoadingContent"
+              :store="estimateStore"
+              store-prop="newEstimate"
+              :custom-field-scope="estimateValidationScope"
+              class="mb-6"
+            />
+
+            <!-- Estimate Template Button-->
+            <SelectTemplateButton
+              :store="estimateStore"
+              component-name="EstimateTemplate"
+              store-prop="newEstimate"
+              :is-mark-as-default="isMarkAsDefault"
+            />
+          </div>
+
+          <CreateTotal
+            :currency="estimateStore.newEstimate.selectedCurrency"
+            :is-loading="isLoadingContent"
+            :store="estimateStore"
+            store-prop="newEstimate"
+            tax-popup-type="estimate"
+          />
+        </div>
+      </BaseScrollPane>
+    </form>
+  </BasePage>
+</template>
+
+<script setup lang="ts">
+import { computed, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
+import cloneDeep from 'lodash/cloneDeep'
+import {
+  required,
+  maxLength,
+  helpers,
+  requiredIf,
+  decimal,
+} from '@vuelidate/validators'
+import useVuelidate from '@vuelidate/core'
+import { useEstimateStore } from '../store'
+import { useCompanyStore } from '@/scripts/stores/company.store'
+import { useNotificationStore } from '@/scripts/stores/notification.store'
+import { useDashboardStore } from '@/scripts/features/company/dashboard/store'
+import {
+  handleApiError,
+  getErrorTranslationKey,
+} from '@/scripts/utils/error-handling'
+import EstimateBasicFields from '../components/EstimateBasicFields.vue'
+import CreateItems from '../components/CreateItems.vue'
+import CreateTotal from '../components/CreateTotal.vue'
+import CreateNotesField from '../components/CreateNotesField.vue'
+import CreateCustomFields from '../components/CreateCustomFields.vue'
+import SelectTemplateButton from '../components/SelectTemplateButton.vue'
+import SelectTemplateModal from '../components/SelectTemplateModal.vue'
+import ItemModal from '../components/ItemModal.vue'
+import TaxTypeModal from '../components/TaxTypeModal.vue'
+import SalesTax from '../components/SalesTax.vue'
+
+const estimateStore = useEstimateStore()
+const companyStore = useCompanyStore()
+const notificationStore = useNotificationStore()
+const dashboardStore = useDashboardStore()
+const { t } = useI18n()
+const route = useRoute()
+const router = useRouter()
+
+const estimateValidationScope = 'newEstimate'
+const isSaving = ref<boolean>(false)
+const isMarkAsDefault = ref<boolean>(false)
+
+const estimateNoteFieldList = ref<string[]>([
+  'customer',
+  'company',
+  'customerCustom',
+  'estimate',
+  'estimateCustom',
+])
+
+const isLoadingContent = computed<boolean>(
+  () => estimateStore.isFetchingInitialSettings,
+)
+
+const pageTitle = computed<string>(() =>
+  isEdit.value ? t('estimates.edit_estimate') : t('estimates.new_estimate'),
+)
+
+const isEdit = computed<boolean>(() => route.name === 'estimates.edit')
+
+const salesTaxEnabled = computed<boolean>(() => {
+  return companyStore.selectedCompanySettings?.sales_tax_us_enabled === 'YES'
+})
+
+const rules = {
+  estimate_date: {
+    required: helpers.withMessage(t('validation.required'), required),
+  },
+  estimate_number: {
+    required: helpers.withMessage(t('validation.required'), required),
+  },
+  reference_number: {
+    maxLength: helpers.withMessage(t('validation.price_maxlength'), maxLength(255)),
+  },
+  customer_id: {
+    required: helpers.withMessage(t('validation.required'), required),
+  },
+  exchange_rate: {
+    required: requiredIf(() => estimateStore.showExchangeRate),
+  },
+}
+
+const v$ = useVuelidate(
+  rules,
+  computed(() => estimateStore.newEstimate),
+  { $scope: estimateValidationScope },
+)
+
+// Initialization
+estimateStore.resetCurrentEstimate()
+v$.value.$reset
+estimateStore.fetchEstimateInitialSettings(
+  isEdit.value,
+  { id: route.params.id as string, query: route.query as Record<string, string> },
+)
+
+watch(
+  () => estimateStore.newEstimate.customer,
+  (newVal) => {
+    if (newVal && (newVal as Record<string, unknown>).currency) {
+      estimateStore.newEstimate.selectedCurrency = (
+        newVal as Record<string, unknown>
+      ).currency as Record<string, unknown>
+    }
+  },
+)
+
+async function submitForm(): Promise<void> {
+  v$.value.$touch()
+
+  if (v$.value.$invalid) {
+    console.log('Estimate form invalid. Errors:', JSON.stringify(
+      v$.value.$errors.map((e: { $property: string; $message: string }) => `${e.$property}: ${e.$message}`)
+    ))
+    return
+  }
+
+  isSaving.value = true
+
+  try {
+    const data: Record<string, unknown> = {
+      ...cloneDeep(estimateStore.newEstimate),
+      sub_total: Math.round(estimateStore.getSubTotal),
+      total: Math.round(estimateStore.getTotal),
+      tax: Math.round(estimateStore.getTotalTax),
+    }
+
+    const items = data.items as Array<Record<string, unknown>>
+    if (data.discount_per_item === 'YES') {
+      items.forEach((item, index) => {
+        if (item.discount_type === 'fixed') {
+          items[index].discount = Math.round((item.discount as number) * 100)
+        }
+      })
+    } else {
+      if (data.discount_type === 'fixed') {
+        data.discount = Math.round((data.discount as number) * 100)
+      }
+    }
+
+    const taxes = data.taxes as Array<Record<string, unknown>>
+    if (data.tax_per_item !== 'YES' && taxes.length) {
+      data.tax_type_ids = taxes.map((tax) => tax.tax_type_id)
+    }
+
+    const action = isEdit.value
+      ? estimateStore.updateEstimate
+      : estimateStore.addEstimate
+
+    const res = await action(data)
+    if (res.data.data) {
+      // Refresh dashboard data after estimate save
+      await dashboardStore.loadData()
+      router.push(`/admin/estimates/${res.data.data.id}/view`)
+    }
+  } catch (err: unknown) {
+    const normalized = handleApiError(err)
+    const translationKey = getErrorTranslationKey(normalized.message)
+
+    notificationStore.showNotification({
+      type: 'error',
+      message: translationKey ? t(translationKey) : normalized.message,
+    })
+  } finally {
+    isSaving.value = false
+  }
+}
+</script>

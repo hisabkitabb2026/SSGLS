@@ -1,0 +1,230 @@
+###############################################################################
+# AlertManager Configuration
+# Alert routing, grouping, and notification rules
+###############################################################################
+
+global:
+  resolve_timeout: 5m
+  slack_api_url: 'http://slack-webhook-url' # Replace with your Slack webhook URL
+  pagerduty_url: 'https://events.pagerduty.com/v2/enqueue'
+
+# Template files for alert notifications
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'
+
+# Top-level routing rules
+route:
+  # Route name
+  receiver: 'default'
+  # How often a notification is resent for a group
+  repeat_interval: 24h
+  # Initial wait time before sending notifications for a group
+  group_wait: 10s
+  # Wait duration for further alerts to arrive before sending group notification
+  group_interval: 10s
+
+  routes:
+    ##############################################################################
+    # Critical Service Alerts
+    ##############################################################################
+    - match:
+        severity: critical
+        component: service
+      receiver: 'critical-services'
+      repeat_interval: 5m
+      group_wait: 0s
+      group_interval: 5m
+
+    ##############################################################################
+    # Database Critical Alerts
+    ##############################################################################
+    - match:
+        severity: critical
+        service: mysql
+      receiver: 'database-alerts'
+      repeat_interval: 5m
+      group_wait: 0s
+
+    - match:
+        severity: critical
+        service: redis
+      receiver: 'cache-alerts'
+      repeat_interval: 5m
+      group_wait: 0s
+
+    - match:
+        severity: critical
+        service: elasticsearch
+      receiver: 'elasticsearch-alerts'
+      repeat_interval: 5m
+      group_wait: 0s
+
+    ##############################################################################
+    # Warning Level Alerts
+    ##############################################################################
+    - match:
+        severity: warning
+      receiver: 'warning-notifications'
+      repeat_interval: 1h
+      group_wait: 30s
+      group_interval: 30s
+
+    ##############################################################################
+    # System Alerts
+    ##############################################################################
+    - match:
+        severity: critical
+        component: system
+      receiver: 'system-critical'
+      repeat_interval: 10m
+      group_wait: 0s
+
+    ##############################################################################
+    # Application Performance Alerts
+    ##############################################################################
+    - match:
+        component: application
+      receiver: 'application-alerts'
+      repeat_interval: 15m
+      group_wait: 15s
+
+    ##############################################################################
+    # Container & Docker Alerts
+    ##############################################################################
+    - match:
+        component: container
+      receiver: 'container-alerts'
+      repeat_interval: 30m
+      group_wait: 20s
+
+# Receiver definitions
+receivers:
+  ##############################################################################
+  # Default Receiver
+  ##############################################################################
+  - name: 'default'
+    slack_configs:
+      - channel: '#monitoring'
+        title: 'Alert: {{ .GroupLabels.alertname }}'
+        text: '{{ .CommonAnnotations.description }}'
+
+  ##############################################################################
+  # Critical Services Receiver
+  ##############################################################################
+  - name: 'critical-services'
+    slack_configs:
+      - channel: '#critical-alerts'
+        title: 'CRITICAL: Service Down - {{ .GroupLabels.service }}'
+        text: '{{ .CommonAnnotations.description }}'
+        color: 'danger'
+    pagerduty_configs:
+      - service_key: 'pagerduty-integration-key'
+        description: '{{ .CommonAnnotations.summary }}'
+        details:
+          severity: 'critical'
+          service: '{{ .GroupLabels.service }}'
+
+  ##############################################################################
+  # Database Alerts Receiver
+  ##############################################################################
+  - name: 'database-alerts'
+    slack_configs:
+      - channel: '#database-alerts'
+        title: 'CRITICAL: MySQL Issue - {{ .GroupLabels.service }}'
+        text: '{{ .CommonAnnotations.description }}'
+        color: 'danger'
+
+  ##############################################################################
+  # Cache Alerts Receiver
+  ##############################################################################
+  - name: 'cache-alerts'
+    slack_configs:
+      - channel: '#cache-alerts'
+        title: 'CRITICAL: Redis Issue'
+        text: '{{ .CommonAnnotations.description }}'
+        color: 'danger'
+
+  ##############################################################################
+  # Elasticsearch Alerts Receiver
+  ##############################################################################
+  - name: 'elasticsearch-alerts'
+    slack_configs:
+      - channel: '#search-alerts'
+        title: 'CRITICAL: Elasticsearch Issue'
+        text: '{{ .CommonAnnotations.description }}'
+        color: 'danger'
+
+  ##############################################################################
+  # Warning Notifications Receiver
+  ##############################################################################
+  - name: 'warning-notifications'
+    slack_configs:
+      - channel: '#warnings'
+        title: 'WARNING: {{ .GroupLabels.alertname }}'
+        text: '{{ .CommonAnnotations.description }}'
+        color: 'warning'
+
+  ##############################################################################
+  # System Critical Receiver
+  ##############################################################################
+  - name: 'system-critical'
+    slack_configs:
+      - channel: '#system-critical'
+        title: 'CRITICAL: System Issue - {{ .GroupLabels.alertname }}'
+        text: '{{ .CommonAnnotations.description }}'
+        color: 'danger'
+
+  ##############################################################################
+  # Application Alerts Receiver
+  ##############################################################################
+  - name: 'application-alerts'
+    slack_configs:
+      - channel: '#application-alerts'
+        title: 'Application Alert: {{ .GroupLabels.alertname }}'
+        text: '{{ .CommonAnnotations.description }}'
+        color: 'warning'
+
+  ##############################################################################
+  # Container Alerts Receiver
+  ##############################################################################
+  - name: 'container-alerts'
+    slack_configs:
+      - channel: '#container-alerts'
+        title: 'Container Alert: {{ .CommonLabels.name }}'
+        text: '{{ .CommonAnnotations.description }}'
+        color: 'warning'
+
+# Inhibition rules - suppress alerts based on other alert conditions
+inhibit_rules:
+  # Don't alert on service errors if the service itself is down
+  - source_match:
+      alertname: 'InvoiceServiceDown'
+    target_match_re:
+      alertname: '.*(InvoiceService|Invoice).*'
+    equal: []
+
+  - source_match:
+      alertname: 'ExpenseServiceDown'
+    target_match_re:
+      alertname: '.*(ExpenseService|Expense).*'
+    equal: []
+
+  - source_match:
+      alertname: 'ProductServiceDown'
+    target_match_re:
+      alertname: '.*(ProductService|Product).*'
+    equal: []
+
+  # Don't alert on disk errors if the disk is full
+  - source_match:
+      alertname: 'LowDiskSpace'
+    target_match_re:
+      alertname: '.*DiskIO.*'
+    equal: []
+
+  # Don't alert on memory issues if the node is down
+  - source_match:
+      alertname: 'NodeDown'
+    target_match_re:
+      alertname: '.*Memory.*'
+    equal: []

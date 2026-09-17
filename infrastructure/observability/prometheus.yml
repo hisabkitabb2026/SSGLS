@@ -1,0 +1,230 @@
+###############################################################################
+# Prometheus Configuration
+# Metrics collection and scraping configuration
+###############################################################################
+
+global:
+  scrape_interval: 15s
+  scrape_timeout: 10s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'invoiceshelf-monitoring'
+    environment: 'production'
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - alertmanager:9093
+
+# Load rules once and periodically evaluate them
+rule_files:
+  - /etc/prometheus/prometheus-rules.yml
+
+# Scrape configurations
+scrape_configs:
+  ##############################################################################
+  # Prometheus Self-Monitoring
+  ##############################################################################
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    metrics_path: '/metrics'
+
+  ##############################################################################
+  # Node Exporter - System Metrics
+  ##############################################################################
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+        labels:
+          instance_type: 'host'
+
+  ##############################################################################
+  # cAdvisor - Container Metrics
+  ##############################################################################
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+        labels:
+          instance_type: 'container'
+
+  ##############################################################################
+  # Invoice Service - DDD Domain (Port 8001, Metrics 9090)
+  ##############################################################################
+  - job_name: 'invoice-service'
+    static_configs:
+      - targets: ['invoice-service:9090']
+        labels:
+          service: 'invoice-service'
+          domain: 'invoice'
+          instance_id: 'invoice-1'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+      - source_labels: [__scheme__]
+        target_label: __scheme__
+        replacement: 'http'
+    scrape_interval: 10s
+    scrape_timeout: 5s
+    metrics_path: '/metrics'
+
+  ##############################################################################
+  # Expense Service - DDD Domain (Port 8002, Metrics 9091)
+  ##############################################################################
+  - job_name: 'expense-service'
+    static_configs:
+      - targets: ['expense-service:9091']
+        labels:
+          service: 'expense-service'
+          domain: 'expense'
+          instance_id: 'expense-1'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+    scrape_interval: 10s
+    scrape_timeout: 5s
+    metrics_path: '/metrics'
+
+  ##############################################################################
+  # Product Service - DDD Domain (Port 8003, Metrics 9092)
+  ##############################################################################
+  - job_name: 'product-service'
+    static_configs:
+      - targets: ['product-service:9092']
+        labels:
+          service: 'product-service'
+          domain: 'product'
+          instance_id: 'product-1'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+    scrape_interval: 10s
+    scrape_timeout: 5s
+    metrics_path: '/metrics'
+
+  ##############################################################################
+  # Customer Service - DDD Domain (Port 8004, Metrics 9093)
+  ##############################################################################
+  - job_name: 'customer-service'
+    static_configs:
+      - targets: ['customer-service:9093']
+        labels:
+          service: 'customer-service'
+          domain: 'customer'
+          instance_id: 'customer-1'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+    scrape_interval: 10s
+    scrape_timeout: 5s
+    metrics_path: '/metrics'
+
+  ##############################################################################
+  # Settings Service - DDD Domain (Port 8005, Metrics 9094)
+  ##############################################################################
+  - job_name: 'settings-service'
+    static_configs:
+      - targets: ['settings-service:9094']
+        labels:
+          service: 'settings-service'
+          domain: 'settings'
+          instance_id: 'settings-1'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+    scrape_interval: 10s
+    scrape_timeout: 5s
+    metrics_path: '/metrics'
+
+  ##############################################################################
+  # Transport Service - DDD Domain (Port 8006, Metrics 9095)
+  ##############################################################################
+  - job_name: 'transport-service'
+    static_configs:
+      - targets: ['transport-service:9095']
+        labels:
+          service: 'transport-service'
+          domain: 'transport'
+          instance_id: 'transport-1'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+    scrape_interval: 10s
+    scrape_timeout: 5s
+    metrics_path: '/metrics'
+
+  ##############################################################################
+  # MySQL Database Metrics
+  ##############################################################################
+  - job_name: 'mysql'
+    static_configs:
+      - targets: ['mysql:3306']
+        labels:
+          service: 'mysql-database'
+          instance_type: 'database'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+
+  ##############################################################################
+  # Redis Cache Metrics
+  ##############################################################################
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis:6379']
+        labels:
+          service: 'redis-cache'
+          instance_type: 'cache'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+
+  ##############################################################################
+  # Elasticsearch Metrics
+  ##############################################################################
+  - job_name: 'elasticsearch'
+    static_configs:
+      - targets: ['elasticsearch:9200']
+        labels:
+          service: 'elasticsearch'
+          instance_type: 'search'
+    metrics_path: '/_prometheus/metrics'
+
+  ##############################################################################
+  # Logstash Metrics
+  ##############################################################################
+  - job_name: 'logstash'
+    static_configs:
+      - targets: ['logstash:9600']
+        labels:
+          service: 'logstash'
+          instance_type: 'log-processor'
+    metrics_path: '/_prometheus/metrics'
+
+  ##############################################################################
+  # Kong API Gateway Metrics
+  ##############################################################################
+  - job_name: 'kong'
+    static_configs:
+      - targets: ['kong:8001']
+        labels:
+          service: 'kong'
+          instance_type: 'api-gateway'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+    scrape_interval: 15s
+
+  ##############################################################################
+  # Jaeger Tracing Metrics
+  ##############################################################################
+  - job_name: 'jaeger'
+    static_configs:
+      - targets: ['jaeger:14269']
+        labels:
+          service: 'jaeger'
+          instance_type: 'tracing'
+    metrics_path: '/metrics'
+    scrape_interval: 15s

@@ -1,0 +1,70 @@
+<?php
+
+namespace App\Http\Resources;
+
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
+
+class EstimateResource extends JsonResource
+{
+    /**
+     * Transform the resource into an array.
+     *
+     * @param  Request  $request
+     */
+    public function toArray($request): array
+    {
+        return [
+            'id' => $this->id,
+            'estimate_date' => $this->estimate_date,
+            'expiry_date' => $this->expiry_date,
+            'estimate_number' => $this->estimate_number,
+            'status' => $this->status,
+            'reference_number' => $this->reference_number,
+            'tax_per_item' => $this->tax_per_item,
+            'tax_included' => $this->tax_included,
+            'discount_per_item' => $this->discount_per_item,
+            'notes' => $this->getNotes(),
+            'discount' => $this->discount,
+            'discount_type' => $this->discount_type,
+            'discount_val' => $this->discount_val,
+            'sub_total' => $this->sub_total,
+            'total' => $this->total,
+            'tax' => $this->tax,
+            'unique_hash' => $this->unique_hash,
+            'creator_id' => $this->creator_id,
+            'template_name' => $this->template_name,
+            'customer_id' => $this->customer_id,
+            'exchange_rate' => $this->exchange_rate,
+            'base_discount_val' => $this->base_discount_val,
+            'base_sub_total' => $this->base_sub_total,
+            'base_total' => $this->base_total,
+            'base_tax' => $this->base_tax,
+            'sequence_number' => $this->sequence_number,
+            'currency_id' => $this->currency_id,
+            'formatted_expiry_date' => $this->formattedExpiryDate,
+            'formatted_estimate_date' => $this->formattedEstimateDate,
+            'estimate_pdf_url' => $this->estimatePdfUrl,
+            'sales_tax_type' => $this->sales_tax_type,
+            'sales_tax_address_type' => $this->sales_tax_address_type,
+            'items' => $this->whenLoaded('items', fn () => EstimateItemResource::collection($this->items)),
+            'customer' => $this->whenLoaded('customer', fn () => new CustomerResource($this->customer)),
+            'creator' => $this->whenLoaded('creator', fn () => new UserResource($this->creator)),
+            'taxes' => $this->whenLoaded('taxes', fn () => TaxResource::collection($this->taxes)),
+            'fields' => $this->whenLoaded('fields', fn () => CustomFieldValueResource::collection($this->fields)),
+            'company' => $this->whenLoaded('company', fn () => new CompanyResource($this->company)),
+            'currency' => $this->whenLoaded('currency', fn () => new CurrencyResource($this->currency)),
+            'estimate_type' => $this->estimate_type ?? 'estimate',
+            'quotation_stations' => $this->whenLoaded('quotationStations', fn () => $this->quotationStations->map(fn ($station) => [
+                'id' => $station->id,
+                'name' => $station->name,
+                'sequence' => $station->sequence,
+                'rates' => $station->rates->map(fn ($rate) => [
+                    'id' => $rate->id,
+                    'capacity' => $rate->capacity,
+                    'rate' => $rate->rate,
+                ])->toArray(),
+            ])->toArray()),
+        ];
+    }
+}

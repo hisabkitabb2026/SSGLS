@@ -1,0 +1,195 @@
+# Kong Services Configuration
+# DDD-based service routing for InvoiceShelf
+
+---
+# Invoice Domain Service
+- name: invoice-service
+  protocol: http
+  host: app
+  port: 9000
+  path: /api/v1/invoices
+  connect_timeout: 6000
+  write_timeout: 60000
+  read_timeout: 60000
+  retries: 3
+  tags:
+    - domain:invoice
+    - ddd
+  ca_certificates: []
+  enabled: true
+
+---
+# Estimate Domain Service
+- name: estimate-service
+  protocol: http
+  host: app
+  port: 9000
+  path: /api/v1/estimates
+  connect_timeout: 6000
+  write_timeout: 60000
+  read_timeout: 60000
+  retries: 3
+  tags:
+    - domain:estimate
+    - ddd
+  enabled: true
+
+---
+# Payment Domain Service
+- name: payment-service
+  protocol: http
+  host: app
+  port: 9000
+  path: /api/v1/payments
+  connect_timeout: 6000
+  write_timeout: 60000
+  read_timeout: 60000
+  retries: 3
+  tags:
+    - domain:payment
+    - ddd
+  enabled: true
+
+---
+# Customer Portal Service
+- name: customer-service
+  protocol: http
+  host: app
+  port: 9000
+  path: /api/v1/customers
+  connect_timeout: 6000
+  write_timeout: 60000
+  read_timeout: 60000
+  retries: 3
+  tags:
+    - domain:customer
+    - ddd
+  enabled: true
+
+---
+# Company Domain Service
+- name: company-service
+  protocol: http
+  host: app
+  port: 9000
+  path: /api/v1/companies
+  connect_timeout: 6000
+  write_timeout: 60000
+  read_timeout: 60000
+  retries: 3
+  tags:
+    - domain:company
+    - ddd
+  enabled: true
+
+---
+# User/Authentication Domain Service
+- name: auth-service
+  protocol: http
+  host: app
+  port: 9000
+  path: /api/v1/auth
+  connect_timeout: 6000
+  write_timeout: 60000
+  read_timeout: 60000
+  retries: 3
+  tags:
+    - domain:auth
+    - ddd
+  enabled: true
+
+---
+# Report/Analytics Domain Service
+- name: report-service
+  protocol: http
+  host: app
+  port: 9000
+  path: /api/v1/reports
+  connect_timeout: 6000
+  write_timeout: 60000
+  read_timeout: 60000
+  retries: 3
+  tags:
+    - domain:report
+    - analytics
+  enabled: true
+
+---
+# Admin Management Service
+- name: admin-service
+  protocol: http
+  host: app
+  port: 9000
+  path: /api/v1/admin
+  connect_timeout: 6000
+  write_timeout: 60000
+  read_timeout: 60000
+  retries: 3
+  tags:
+    - domain:admin
+    - management
+  enabled: true
+
+---
+# Settings Service
+- name: settings-service
+  protocol: http
+  host: app
+  port: 9000
+  path: /api/v1/settings
+  connect_timeout: 6000
+  write_timeout: 60000
+  read_timeout: 60000
+  retries: 3
+  tags:
+    - domain:settings
+    - configuration
+  enabled: true
+
+---
+# File/Media Service
+- name: file-service
+  protocol: http
+  host: app
+  port: 9000
+  path: /api/v1/files
+  connect_timeout: 6000
+  write_timeout: 300000
+  read_timeout: 300000
+  retries: 2
+  tags:
+    - domain:file
+    - media
+  enabled: true
+
+---
+# Health Check Service (for monitoring)
+- name: health-service
+  protocol: http
+  host: app
+  port: 9000
+  path: /health
+  connect_timeout: 5000
+  write_timeout: 30000
+  read_timeout: 30000
+  retries: 5
+  tags:
+    - health-check
+    - monitoring
+  enabled: true
+
+---
+# Frontend SPA Service
+- name: web-service
+  protocol: http
+  host: app
+  port: 9000
+  path: /
+  connect_timeout: 6000
+  write_timeout: 60000
+  read_timeout: 60000
+  retries: 3
+  tags:
+    - web
+    - frontend
+  enabled: true

@@ -1,0 +1,385 @@
+{
+  "rabbit_version": "3.12.0",
+  "rabbitmq_version": "3.12.0",
+  "product_name": "RabbitMQ",
+  "product_version": "3.12.0",
+  "users": [
+    {
+      "name": "invoiceshelf",
+      "password_hash": "7yBeB4qQSFMR9u84sBo9VCJKVEBLVEM5y2RS8Mit4gIGZzQOZwIDAA==",
+      "hashing_algorithm": "rabbit_password_hashing_sha256",
+      "tags": "administrator",
+      "limits": {
+        "max-connections": -1,
+        "max-channels": -1
+      }
+    },
+    {
+      "name": "guest",
+      "password_hash": "7yBeB4qQSFMR9u84sBo9VCJKVEBLVEM5y2RS8Mit4gIGZzQOZwIDAA==",
+      "hashing_algorithm": "rabbit_password_hashing_sha256",
+      "tags": "administrator",
+      "limits": {
+        "max-connections": -1,
+        "max-channels": -1
+      }
+    }
+  ],
+  "vhosts": [
+    {
+      "name": "/invoiceshelf",
+      "description": "InvoiceShelf Virtual Host"
+    }
+  ],
+  "permissions": [
+    {
+      "user": "invoiceshelf",
+      "vhost": "/invoiceshelf",
+      "configure": ".*",
+      "write": ".*",
+      "read": ".*"
+    },
+    {
+      "user": "guest",
+      "vhost": "/",
+      "configure": ".*",
+      "write": ".*",
+      "read": ".*"
+    }
+  ],
+  "topic_permissions": [],
+  "parameters": [],
+  "global_parameters": [
+    {
+      "name": "cluster_name",
+      "value": "invoiceshelf@rabbitmq"
+    }
+  ],
+  "policies": [
+    {
+      "name": "ha-all",
+      "vhost": "/invoiceshelf",
+      "pattern": "^invoiceshelf\\.",
+      "apply-to": "queues",
+      "definition": {
+        "ha-mode": "all",
+        "ha-sync-mode": "automatic",
+        "ha-sync-batch-size": 10
+      },
+      "priority": 10
+    },
+    {
+      "name": "message-ttl",
+      "vhost": "/invoiceshelf",
+      "pattern": "^invoiceshelf\\.dlq\\.",
+      "apply-to": "queues",
+      "definition": {
+        "message-ttl": 2592000000,
+        "expires": 2592000000
+      },
+      "priority": 20
+    }
+  ],
+  "exchanges": [
+    {
+      "name": "invoiceshelf.invoice",
+      "vhost": "/invoiceshelf",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "invoiceshelf.estimate",
+      "vhost": "/invoiceshelf",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "invoiceshelf.payment",
+      "vhost": "/invoiceshelf",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "invoiceshelf.customer",
+      "vhost": "/invoiceshelf",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "invoiceshelf.notification",
+      "vhost": "/invoiceshelf",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "invoiceshelf.report",
+      "vhost": "/invoiceshelf",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "invoiceshelf.dlq",
+      "vhost": "/invoiceshelf",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "invoiceshelf.pdf",
+      "vhost": "/invoiceshelf",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "invoiceshelf.email",
+      "vhost": "/invoiceshelf",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    }
+  ],
+  "queues": [
+    {
+      "name": "invoiceshelf.invoice.created",
+      "vhost": "/invoiceshelf",
+      "durable": true,
+      "auto_delete": false,
+      "exclusive": false,
+      "arguments": {
+        "x-message-ttl": 2592000000,
+        "x-dead-letter-exchange": "invoiceshelf.dlq"
+      }
+    },
+    {
+      "name": "invoiceshelf.invoice.updated",
+      "vhost": "/invoiceshelf",
+      "durable": true,
+      "auto_delete": false,
+      "exclusive": false,
+      "arguments": {
+        "x-message-ttl": 2592000000,
+        "x-dead-letter-exchange": "invoiceshelf.dlq"
+      }
+    },
+    {
+      "name": "invoiceshelf.invoice.sent",
+      "vhost": "/invoiceshelf",
+      "durable": true,
+      "auto_delete": false,
+      "exclusive": false,
+      "arguments": {
+        "x-message-ttl": 2592000000,
+        "x-dead-letter-exchange": "invoiceshelf.dlq"
+      }
+    },
+    {
+      "name": "invoiceshelf.estimate.created",
+      "vhost": "/invoiceshelf",
+      "durable": true,
+      "auto_delete": false,
+      "exclusive": false,
+      "arguments": {
+        "x-message-ttl": 2592000000,
+        "x-dead-letter-exchange": "invoiceshelf.dlq"
+      }
+    },
+    {
+      "name": "invoiceshelf.estimate.sent",
+      "vhost": "/invoiceshelf",
+      "durable": true,
+      "auto_delete": false,
+      "exclusive": false,
+      "arguments": {
+        "x-message-ttl": 2592000000,
+        "x-dead-letter-exchange": "invoiceshelf.dlq"
+      }
+    },
+    {
+      "name": "invoiceshelf.payment.received",
+      "vhost": "/invoiceshelf",
+      "durable": true,
+      "auto_delete": false,
+      "exclusive": false,
+      "arguments": {
+        "x-message-ttl": 2592000000,
+        "x-dead-letter-exchange": "invoiceshelf.dlq"
+      }
+    },
+    {
+      "name": "invoiceshelf.customer.registered",
+      "vhost": "/invoiceshelf",
+      "durable": true,
+      "auto_delete": false,
+      "exclusive": false,
+      "arguments": {
+        "x-message-ttl": 2592000000,
+        "x-dead-letter-exchange": "invoiceshelf.dlq"
+      }
+    },
+    {
+      "name": "invoiceshelf.notification.email",
+      "vhost": "/invoiceshelf",
+      "durable": true,
+      "auto_delete": false,
+      "exclusive": false,
+      "arguments": {
+        "x-message-ttl": 604800000,
+        "x-dead-letter-exchange": "invoiceshelf.dlq"
+      }
+    },
+    {
+      "name": "invoiceshelf.notification.sms",
+      "vhost": "/invoiceshelf",
+      "durable": true,
+      "auto_delete": false,
+      "exclusive": false,
+      "arguments": {
+        "x-message-ttl": 604800000,
+        "x-dead-letter-exchange": "invoiceshelf.dlq"
+      }
+    },
+    {
+      "name": "invoiceshelf.pdf.generation",
+      "vhost": "/invoiceshelf",
+      "durable": true,
+      "auto_delete": false,
+      "exclusive": false,
+      "arguments": {
+        "x-message-ttl": 3600000,
+        "x-dead-letter-exchange": "invoiceshelf.dlq"
+      }
+    },
+    {
+      "name": "invoiceshelf.report.generation",
+      "vhost": "/invoiceshelf",
+      "durable": true,
+      "auto_delete": false,
+      "exclusive": false,
+      "arguments": {
+        "x-message-ttl": 7200000,
+        "x-dead-letter-exchange": "invoiceshelf.dlq"
+      }
+    },
+    {
+      "name": "invoiceshelf.dlq.queue",
+      "vhost": "/invoiceshelf",
+      "durable": true,
+      "auto_delete": false,
+      "exclusive": false,
+      "arguments": {
+        "x-message-ttl": 2592000000
+      }
+    }
+  ],
+  "bindings": [
+    {
+      "source": "invoiceshelf.invoice",
+      "destination": "invoiceshelf.invoice.created",
+      "destination_type": "queue",
+      "routing_key": "invoice.created",
+      "arguments": {}
+    },
+    {
+      "source": "invoiceshelf.invoice",
+      "destination": "invoiceshelf.invoice.updated",
+      "destination_type": "queue",
+      "routing_key": "invoice.updated",
+      "arguments": {}
+    },
+    {
+      "source": "invoiceshelf.invoice",
+      "destination": "invoiceshelf.invoice.sent",
+      "destination_type": "queue",
+      "routing_key": "invoice.sent",
+      "arguments": {}
+    },
+    {
+      "source": "invoiceshelf.estimate",
+      "destination": "invoiceshelf.estimate.created",
+      "destination_type": "queue",
+      "routing_key": "estimate.created",
+      "arguments": {}
+    },
+    {
+      "source": "invoiceshelf.estimate",
+      "destination": "invoiceshelf.estimate.sent",
+      "destination_type": "queue",
+      "routing_key": "estimate.sent",
+      "arguments": {}
+    },
+    {
+      "source": "invoiceshelf.payment",
+      "destination": "invoiceshelf.payment.received",
+      "destination_type": "queue",
+      "routing_key": "payment.received",
+      "arguments": {}
+    },
+    {
+      "source": "invoiceshelf.customer",
+      "destination": "invoiceshelf.customer.registered",
+      "destination_type": "queue",
+      "routing_key": "customer.registered",
+      "arguments": {}
+    },
+    {
+      "source": "invoiceshelf.notification",
+      "destination": "invoiceshelf.notification.email",
+      "destination_type": "queue",
+      "routing_key": "notification.email",
+      "arguments": {}
+    },
+    {
+      "source": "invoiceshelf.notification",
+      "destination": "invoiceshelf.notification.sms",
+      "destination_type": "queue",
+      "routing_key": "notification.sms",
+      "arguments": {}
+    },
+    {
+      "source": "invoiceshelf.pdf",
+      "destination": "invoiceshelf.pdf.generation",
+      "destination_type": "queue",
+      "routing_key": "pdf.generation",
+      "arguments": {}
+    },
+    {
+      "source": "invoiceshelf.report",
+      "destination": "invoiceshelf.report.generation",
+      "destination_type": "queue",
+      "routing_key": "report.generation",
+      "arguments": {}
+    },
+    {
+      "source": "invoiceshelf.dlq",
+      "destination": "invoiceshelf.dlq.queue",
+      "destination_type": "queue",
+      "routing_key": "dlq.*",
+      "arguments": {}
+    }
+  ]
+}

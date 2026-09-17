@@ -1,0 +1,59 @@
+<?php
+
+namespace App\Http\Resources;
+
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
+
+class RecurringInvoiceResource extends JsonResource
+{
+    /**
+     * Transform the resource into an array.
+     *
+     * @param  Request  $request
+     */
+    public function toArray($request): array
+    {
+        return [
+            'id' => $this->id,
+            'starts_at' => $this->starts_at,
+            'formatted_starts_at' => $this->formattedStartsAt,
+            'formatted_created_at' => $this->formattedCreatedAt,
+            'formatted_next_invoice_at' => $this->formattedNextInvoiceAt,
+            'formatted_limit_date' => $this->formattedLimitDate,
+            'send_automatically' => $this->send_automatically,
+            'customer_id' => $this->customer_id,
+            'company_id' => $this->company_id,
+            'creator_id' => $this->creator_id,
+            'status' => $this->status,
+            'next_invoice_at' => $this->next_invoice_at,
+            'frequency' => $this->frequency,
+            'limit_by' => $this->limit_by,
+            'limit_count' => $this->limit_count,
+            'limit_date' => $this->limit_date,
+            'exchange_rate' => $this->exchange_rate,
+            'tax_per_item' => $this->tax_per_item,
+            'tax_included' => $this->tax_included,
+            'discount_per_item' => $this->discount_per_item,
+            'notes' => $this->notes,
+            'discount_type' => $this->discount_type,
+            'discount' => $this->discount,
+            'discount_val' => $this->discount_val,
+            'sub_total' => $this->sub_total,
+            'total' => $this->total,
+            'tax' => $this->tax,
+            'due_amount' => $this->due_amount,
+            'template_name' => $this->template_name,
+            'sales_tax_type' => $this->sales_tax_type,
+            'sales_tax_address_type' => $this->sales_tax_address_type,
+            'fields' => $this->whenLoaded('fields', fn () => CustomFieldValueResource::collection($this->fields)),
+            'items' => $this->whenLoaded('items', fn () => InvoiceItemResource::collection($this->items)),
+            'customer' => $this->whenLoaded('customer', fn () => new CustomerResource($this->customer)),
+            'company' => $this->whenLoaded('company', fn () => new CompanyResource($this->company)),
+            'invoices' => $this->whenLoaded('invoices', fn () => InvoiceResource::collection($this->invoices)),
+            'taxes' => $this->whenLoaded('taxes', fn () => TaxResource::collection($this->taxes)),
+            'creator' => $this->whenLoaded('creator', fn () => new UserResource($this->creator)),
+            'currency' => $this->whenLoaded('currency', fn () => new CurrencyResource($this->currency)),
+        ];
+    }
+}

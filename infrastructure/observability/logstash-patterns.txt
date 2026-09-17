@@ -1,0 +1,65 @@
+###############################################################################
+# Logstash Custom Grok Patterns
+# Patterns for parsing custom application log formats
+###############################################################################
+
+# Laravel/PHP Application Logs
+LARAVEL_TIMESTAMP \[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\]
+LARAVEL_LOG %{LARAVEL_TIMESTAMP:timestamp} %{DATA:env}\.%{LOGLEVEL:level}: %{GREEDYDATA:message}
+
+# Microservice Request Pattern
+MICROSERVICE_REQUEST \[%{TIMESTAMP_ISO8601:timestamp}\] %{DATA:service} \[%{LOGLEVEL:level}\] %{DATA:method} %{DATA:path} - %{NUMBER:status_code} - %{NUMBER:response_time}ms
+
+# Database Query Pattern
+DB_QUERY \[%{TIMESTAMP_ISO8601:timestamp}\] \[%{DATA:database}\] %{DATA:query_type} on table `%{DATA:table_name}` - %{NUMBER:execution_time}ms
+
+# API Gateway Access Log
+API_GATEWAY_ACCESS %{TIMESTAMP_ISO8601:timestamp} \| %{IPORHOST:client_ip} \| %{DATA:request_method} \| %{DATA:request_path} \| %{NUMBER:status_code} \| %{NUMBER:response_time}ms
+
+# Distributed Trace Pattern
+DISTRIBUTED_TRACE \[%{TIMESTAMP_ISO8601:timestamp}\] trace_id=%{DATA:trace_id} span_id=%{DATA:span_id} parent_span_id=%{DATA:parent_span_id} service=%{DATA:service} operation=%{DATA:operation} duration=%{NUMBER:duration}ms
+
+# Exception Pattern
+EXCEPTION_LOG \[%{TIMESTAMP_ISO8601:timestamp}\] %{LOGLEVEL:level}: %{DATA:exception_type}: %{GREEDYDATA:exception_message}
+
+# Authentication Log
+AUTH_LOG \[%{TIMESTAMP_ISO8601:timestamp}\] %{DATA:auth_type} %{WORD:action} for user %{DATA:username} from %{IPORHOST:source_ip}
+
+# Business Event Pattern
+BUSINESS_EVENT \[%{TIMESTAMP_ISO8601:timestamp}\] %{WORD:event_type} created: %{DATA:entity_type} ID %{NUMBER:entity_id} by user %{NUMBER:user_id}
+
+# Service Health Check
+HEALTH_CHECK \[%{TIMESTAMP_ISO8601:timestamp}\] Health check %{WORD:status}: %{DATA:service} response_time=%{NUMBER:response_time}ms
+
+# Cache Operation
+CACHE_OP \[%{TIMESTAMP_ISO8601:timestamp}\] %{WORD:operation} cache key '%{DATA:cache_key}' - %{NUMBER:operation_time}ms
+
+# Queue Message
+QUEUE_MSG \[%{TIMESTAMP_ISO8601:timestamp}\] Queue %{DATA:queue_name} processed message ID %{DATA:message_id} - %{NUMBER:processing_time}ms
+
+# File Upload
+FILE_UPLOAD \[%{TIMESTAMP_ISO8601:timestamp}\] File upload: %{DATA:filename} \(%{NUMBER:file_size} bytes\) by user %{NUMBER:user_id}
+
+# Report Generation
+REPORT_GEN \[%{TIMESTAMP_ISO8601:timestamp}\] Report %{DATA:report_name} generated: %{DATA:report_type} for company %{NUMBER:company_id} in %{NUMBER:generation_time}ms
+
+# Payment Processing
+PAYMENT_LOG \[%{TIMESTAMP_ISO8601:timestamp}\] Payment %{WORD:status}: %{DATA:transaction_id} amount=%{NUMBER:amount} currency=%{DATA:currency} gateway=%{DATA:gateway}
+
+# Notification Delivery
+NOTIFICATION_LOG \[%{TIMESTAMP_ISO8601:timestamp}\] Notification %{WORD:type} %{WORD:status}: %{DATA:notification_id} to %{DATA:recipient} - %{NUMBER:delivery_time}ms
+
+# Background Job
+BG_JOB_LOG \[%{TIMESTAMP_ISO8601:timestamp}\] Job %{DATA:job_name} %{WORD:status}: %{DATA:job_id} - %{NUMBER:execution_time}ms
+
+# Webhook Event
+WEBHOOK_LOG \[%{TIMESTAMP_ISO8601:timestamp}\] Webhook %{WORD:event_type} to %{DATA:webhook_url} - %{WORD:status} - %{NUMBER:response_time}ms
+
+# Import/Export Operation
+IMPORT_EXPORT_LOG \[%{TIMESTAMP_ISO8601:timestamp}\] %{WORD:operation} %{WORD:status}: %{DATA:file_type} file with %{NUMBER:record_count} records - %{NUMBER:operation_time}ms
+
+# System Performance
+SYSTEM_PERF \[%{TIMESTAMP_ISO8601:timestamp}\] CPU: %{NUMBER:cpu_usage}% \| Memory: %{NUMBER:memory_usage}% \| Disk: %{NUMBER:disk_usage}%
+
+# Service Communication
+SERVICE_COMM \[%{TIMESTAMP_ISO8601:timestamp}\] %{DATA:source_service} -> %{DATA:target_service}: %{DATA:operation} - %{WORD:status} - %{NUMBER:latency}ms

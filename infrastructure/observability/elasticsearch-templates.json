@@ -1,0 +1,323 @@
+{
+  "order": 0,
+  "template": "logs-*",
+  "settings": {
+    "number_of_shards": 1,
+    "number_of_replicas": 0,
+    "index": {
+      "codec": "best_compression",
+      "refresh_interval": "5s",
+      "lifecycle": {
+        "name": "logs-policy",
+        "rollover_alias": "logs"
+      }
+    }
+  },
+  "mappings": {
+    "dynamic": true,
+    "dynamic_date_formats": [
+      "strict_date_optional_time||epoch_millis"
+    ],
+    "properties": {
+      "@timestamp": {
+        "type": "date",
+        "format": "strict_date_optional_time||epoch_millis"
+      },
+      "@version": {
+        "type": "keyword"
+      },
+      "message": {
+        "type": "text",
+        "analyzer": "standard",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+      },
+      "timestamp": {
+        "type": "date",
+        "format": "strict_date_optional_time||epoch_millis"
+      },
+      "level": {
+        "type": "keyword"
+      },
+      "severity": {
+        "type": "keyword"
+      },
+      "service": {
+        "type": "keyword"
+      },
+      "domain": {
+        "type": "keyword"
+      },
+      "service_name": {
+        "type": "keyword"
+      },
+      "environment": {
+        "type": "keyword"
+      },
+      "type": {
+        "type": "keyword"
+      },
+      "tags": {
+        "type": "keyword"
+      },
+      "host": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "keyword"
+          },
+          "hostname": {
+            "type": "keyword"
+          },
+          "ip": {
+            "type": "ip"
+          }
+        }
+      },
+      "docker": {
+        "type": "object",
+        "properties": {
+          "container": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "keyword"
+              },
+              "name": {
+                "type": "keyword"
+              },
+              "image": {
+                "type": "keyword"
+              }
+            }
+          }
+        }
+      },
+      "request_method": {
+        "type": "keyword"
+      },
+      "request_path": {
+        "type": "keyword"
+      },
+      "status": {
+        "type": "integer"
+      },
+      "status_code": {
+        "type": "integer"
+      },
+      "response_time": {
+        "type": "long"
+      },
+      "response_time_ms": {
+        "type": "long"
+      },
+      "latency": {
+        "type": "long"
+      },
+      "duration": {
+        "type": "long"
+      },
+      "execution_time": {
+        "type": "long"
+      },
+      "processing_time": {
+        "type": "long"
+      },
+      "operation_time": {
+        "type": "long"
+      },
+      "delivery_time": {
+        "type": "long"
+      },
+      "trace_id": {
+        "type": "keyword"
+      },
+      "span_id": {
+        "type": "keyword"
+      },
+      "parent_span_id": {
+        "type": "keyword"
+      },
+      "transaction_id": {
+        "type": "keyword"
+      },
+      "request_id": {
+        "type": "keyword"
+      },
+      "correlation_id": {
+        "type": "keyword"
+      },
+      "user_id": {
+        "type": "keyword"
+      },
+      "username": {
+        "type": "keyword"
+      },
+      "user_agent": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword"
+          }
+        }
+      },
+      "client_ip": {
+        "type": "ip"
+      },
+      "source_ip": {
+        "type": "ip"
+      },
+      "database": {
+        "type": "keyword"
+      },
+      "table_name": {
+        "type": "keyword"
+      },
+      "query_type": {
+        "type": "keyword"
+      },
+      "operation": {
+        "type": "keyword"
+      },
+      "method": {
+        "type": "keyword"
+      },
+      "path": {
+        "type": "keyword"
+      },
+      "exception_type": {
+        "type": "keyword"
+      },
+      "exception_message": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword"
+          }
+        }
+      },
+      "stack_trace": {
+        "type": "text"
+      },
+      "error_code": {
+        "type": "keyword"
+      },
+      "error_details": {
+        "type": "text"
+      },
+      "event_type": {
+        "type": "keyword"
+      },
+      "entity_type": {
+        "type": "keyword"
+      },
+      "entity_id": {
+        "type": "keyword"
+      },
+      "action": {
+        "type": "keyword"
+      },
+      "auth_type": {
+        "type": "keyword"
+      },
+      "source_service": {
+        "type": "keyword"
+      },
+      "target_service": {
+        "type": "keyword"
+      },
+      "queue_name": {
+        "type": "keyword"
+      },
+      "message_id": {
+        "type": "keyword"
+      },
+      "cache_key": {
+        "type": "keyword"
+      },
+      "filename": {
+        "type": "keyword"
+      },
+      "file_size": {
+        "type": "long"
+      },
+      "file_type": {
+        "type": "keyword"
+      },
+      "report_name": {
+        "type": "keyword"
+      },
+      "report_type": {
+        "type": "keyword"
+      },
+      "company_id": {
+        "type": "keyword"
+      },
+      "amount": {
+        "type": "scaled_float",
+        "scaling_factor": 100
+      },
+      "currency": {
+        "type": "keyword"
+      },
+      "gateway": {
+        "type": "keyword"
+      },
+      "payment_status": {
+        "type": "keyword"
+      },
+      "notification_type": {
+        "type": "keyword"
+      },
+      "notification_id": {
+        "type": "keyword"
+      },
+      "recipient": {
+        "type": "keyword"
+      },
+      "webhook_url": {
+        "type": "keyword"
+      },
+      "webhook_event": {
+        "type": "keyword"
+      },
+      "job_name": {
+        "type": "keyword"
+      },
+      "job_id": {
+        "type": "keyword"
+      },
+      "record_count": {
+        "type": "long"
+      },
+      "cpu_usage": {
+        "type": "scaled_float",
+        "scaling_factor": 100
+      },
+      "memory_usage": {
+        "type": "scaled_float",
+        "scaling_factor": 100
+      },
+      "disk_usage": {
+        "type": "scaled_float",
+        "scaling_factor": 100
+      },
+      "is_http_request": {
+        "type": "boolean"
+      },
+      "type_of_log": {
+        "type": "keyword"
+      },
+      "geoip": {
+        "type": "geo_point"
+      }
+    }
+  },
+  "aliases": {
+    "logs": {}
+  }
+}

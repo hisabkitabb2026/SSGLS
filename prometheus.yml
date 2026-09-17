@@ -1,0 +1,93 @@
+###############################################################################
+# Prometheus Configuration for InvoiceShelf Microservices Stack
+# =============================================================================
+# Scrapes metrics from all 6 microservices + Kong + RabbitMQ + infrastructure.
+# Used by docker-compose.full.yml.
+###############################################################################
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'invoiceshelf'
+    environment: 'production'
+
+# Scrape configurations
+scrape_configs:
+  ##############################################################################
+  # Prometheus Self-Metrics
+  ##############################################################################
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    scrape_interval: 30s
+
+  ##############################################################################
+  # Kong API Gateway Metrics
+  ##############################################################################
+  - job_name: 'kong'
+    static_configs:
+      - targets: ['kong:8100']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+
+  ##############################################################################
+  # RabbitMQ Metrics
+  ##############################################################################
+  - job_name: 'rabbitmq'
+    static_configs:
+      - targets: ['rabbitmq:15692']
+    metrics_path: '/metrics/per-object'
+    basic_auth:
+      username: 'invoiceshelf'
+      password: 'rabbitmq_password'
+    scrape_interval: 30s
+
+  ##############################################################################
+  # Microservice Metrics
+  # Each service exposes a /metrics endpoint on its internal port.
+  ##############################################################################
+  - job_name: 'invoice-service'
+    static_configs:
+      - targets: ['invoice-service:8001']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+
+  - job_name: 'expense-service'
+    static_configs:
+      - targets: ['expense-service:8002']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+
+  - job_name: 'product-service'
+    static_configs:
+      - targets: ['product-service:8003']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+
+  - job_name: 'customer-service'
+    static_configs:
+      - targets: ['customer-service:8004']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+
+  - job_name: 'settings-service'
+    static_configs:
+      - targets: ['settings-service:8005']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+
+  - job_name: 'transport-service'
+    static_configs:
+      - targets: ['transport-service:8006']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+
+  ##############################################################################
+  # Grafana Self-Metrics
+  ##############################################################################
+  - job_name: 'grafana'
+    static_configs:
+      - targets: ['grafana:3000']
+    metrics_path: '/metrics'
+    scrape_interval: 60s

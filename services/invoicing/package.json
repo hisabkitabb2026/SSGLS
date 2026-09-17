@@ -1,0 +1,58 @@
+{
+  "name": "invoicing-microservice",
+  "version": "1.0.0",
+  "description": "Production-ready Invoicing microservice with PostgreSQL, JWT, RabbitMQ, and comprehensive testing",
+  "main": "dist/app.js",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/app.ts",
+    "start": "node dist/app.js",
+    "build": "tsc",
+    "test": "vitest",
+    "test:coverage": "vitest --coverage",
+    "test:integration": "vitest integration",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "migrate": "node dist/migrations/run.js",
+    "seed": "node dist/seeders/run.js"
+  },
+  "keywords": [
+    "invoicing",
+    "microservice",
+    "nodejs",
+    "typescript",
+    "postgresql",
+    "rabbitmq"
+  ],
+  "author": "InvoiceShelf Team",
+  "license": "MIT",
+  "dependencies": {
+    "amqplib": "^0.10.3",
+    "express": "^4.18.2",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.11.3",
+    "prom-client": "^15.0.0",
+    "sequelize": "^6.35.2",
+    "uuid": "^9.0.1",
+    "winston": "^3.11.0",
+    "dotenv": "^16.3.1",
+    "cors": "^2.8.5",
+    "express-async-errors": "^3.1.1"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.10.6",
+    "@types/amqplib": "^0.10.4",
+    "@types/uuid": "^9.0.7",
+    "@typescript-eslint/eslint-plugin": "^6.17.0",
+    "@typescript-eslint/parser": "^6.17.0",
+    "@vitest/coverage-v8": "^1.0.4",
+    "eslint": "^8.56.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3",
+    "vitest": "^1.0.4",
+    "supertest": "^6.3.3",
+    "@types/supertest": "^6.0.2"
+  }
+}

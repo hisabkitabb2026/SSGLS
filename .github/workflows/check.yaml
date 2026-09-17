@@ -1,0 +1,112 @@
+name: Check
+
+# Run this workflow every time a new commit pushed to your repository
+on:
+    push:
+        tags-ignore:
+            - "*"
+        branches-ignore:
+            - 'translations'
+    pull_request:
+        branches-ignore:
+            - 'translations'
+    # Allow manually triggering the workflow.
+    workflow_dispatch:
+
+jobs:
+    changes:
+        name: 🔍 Detect changes
+        runs-on: ubuntu-latest
+        outputs:
+            php: ${{ steps.filter.outputs.php }}
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v6
+
+            - name: Check for file changes
+              uses: dorny/paths-filter@v4
+              id: filter
+              with:
+                  filters: |
+                      php:
+                          - 'app/**'
+                          - 'config/**'
+                          - 'database/**'
+                          - 'routes/**'
+                          - 'tests/**'
+                          - 'composer.json'
+                          - 'composer.lock'
+                          - 'phpunit.xml'
+
+    kill_previous:
+        name: 0️⃣ Kill previous runs
+        runs-on: ubuntu-latest
+        # We want to run on external PRs, but not on our own internal PRs as they'll be run by the push to the branch.
+        if: (github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository)
+        steps:
+            - name: Cancel Previous Runs
+              uses: styfle/cancel-workflow-action@0.13.1
+              with:
+                  access_token: ${{ github.token }}
+
+    php_syntax_errors:
+        name: 1️⃣ PHP Code Style errors
+        runs-on: ubuntu-latest
+        needs:
+            - kill_previous
+            - changes
+        if: needs.changes.outputs.php == 'true'
+        steps:
+            - name: Set up PHP
+              uses: shivammathur/setup-php@v2
+              with:
+                  php-version: 8.4
+
+            - name: Checkout code
+              uses: actions/checkout@v6
+
+            - name: Install dependencies
+              uses: ramsey/composer-install@4.0.0
+
+            - name: Check source code for syntax errors
+              run: ./vendor/bin/pint --test
+
+    tests:
+        name: 2️⃣ PHP ${{ matrix.php-version }} Tests
+        needs:
+            - php_syntax_errors
+            - changes
+        if: needs.changes.outputs.php == 'true'
+        runs-on: ubuntu-latest
+        strategy:
+            matrix:
+                php-version:
+                    - 8.4
+        env:
+            extensions: bcmath, curl, dom, gd, imagick, json, libxml, mbstring, pcntl, pdo, pdo_mysql, zip
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v6
+
+            - name: Setup PHP Action
+              uses: shivammathur/setup-php@v2
+              with:
+                  php-version: ${{ matrix.php-version }}
+                  extensions: ${{ env.extensions }}
+                  coverage: none
+                  tools: pecl, composer
+
+            - name: Install Composer dependencies
+              uses: ramsey/composer-install@4.0.0
+
+            - name: Apply tests ${{ matrix.php-version }} (parallel)
+              # The parallel pipeline honours only the FIRST --exclude-group
+              # flag, so all serially-run groups share the one serial-only tag.
+              run: php artisan test --parallel --exclude-group=serial-only
+
+            - name: Apply module, architecture and isolated tests ${{ matrix.php-version }} (serial)
+              run: |
+                  php artisan test --group=modules
+                  php artisan test --group=architecture
+                  php artisan test --group=isolated

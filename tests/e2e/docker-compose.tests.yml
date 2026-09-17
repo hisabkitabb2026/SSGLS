@@ -1,0 +1,392 @@
+###############################################################################
+# Docker Compose: E2E Test Stack
+# Orchestrates all microservices for end-to-end testing
+# Usage: docker-compose -f docker-compose.tests.yml up -d
+###############################################################################
+
+version: '3.8'
+
+services:
+  ##############################################################################
+  # MySQL Database (shared across all services)
+  ##############################################################################
+  mysql:
+    image: mysql:8.0-alpine
+    container_name: invoiceshelf-test-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_DATABASE: invoiceshelf_test
+      MYSQL_USER: test_user
+      MYSQL_PASSWORD: test_password
+    ports:
+      - "3306:3306"
+    networks:
+      - test-network
+    volumes:
+      - mysql-test-data:/var/lib/mysql
+      - ./scripts/init-test-databases.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    labels:
+      - "test=true"
+
+  ##############################################################################
+  # Redis (shared cache for all services)
+  ##############################################################################
+  redis:
+    image: redis:7-alpine
+    container_name: invoiceshelf-test-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    networks:
+      - test-network
+    volumes:
+      - redis-test-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    labels:
+      - "test=true"
+
+  ##############################################################################
+  # RabbitMQ (event bus for services)
+  ##############################################################################
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    container_name: invoiceshelf-test-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: test_user
+      RABBITMQ_DEFAULT_PASS: test_password
+      RABBITMQ_DEFAULT_VHOST: /
+    ports:
+      - "5672:5672"    # AMQP
+      - "15672:15672"  # Management UI
+    networks:
+      - test-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    labels:
+      - "test=true"
+
+  ##############################################################################
+  # Invoice Service (Port 8001)
+  ##############################################################################
+  invoice-service:
+    image: invoiceshelf/invoice-service:latest
+    container_name: invoiceshelf-test-invoice-service
+    restart: unless-stopped
+    environment:
+      SERVICE_NAME: invoice-service
+      SERVICE_PORT: 8001
+      DATABASE_URL: mysql://test_user:test_password@mysql:3306/invoiceshelf_invoice_test
+      REDIS_URL: redis://redis:6379/1
+      RABBITMQ_URL: amqp://test_user:test_password@rabbitmq:5672/
+      LOG_LEVEL: debug
+      ENABLE_METRICS: "true"
+      METRICS_PORT: 9090
+      DEBUG: "true"
+    ports:
+      - "8001:8001"
+      - "9090:9090"
+    networks:
+      - test-network
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    labels:
+      - "test=true"
+
+  ##############################################################################
+  # Expense Service (Port 8002)
+  ##############################################################################
+  expense-service:
+    image: invoiceshelf/expense-service:latest
+    container_name: invoiceshelf-test-expense-service
+    restart: unless-stopped
+    environment:
+      SERVICE_NAME: expense-service
+      SERVICE_PORT: 8002
+      DATABASE_URL: mysql://test_user:test_password@mysql:3306/invoiceshelf_expense_test
+      REDIS_URL: redis://redis:6379/2
+      RABBITMQ_URL: amqp://test_user:test_password@rabbitmq:5672/
+      LOG_LEVEL: debug
+      ENABLE_METRICS: "true"
+      METRICS_PORT: 9091
+      DEBUG: "true"
+    ports:
+      - "8002:8002"
+      - "9091:9091"
+    networks:
+      - test-network
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    labels:
+      - "test=true"
+
+  ##############################################################################
+  # Product Service (Port 8003)
+  ##############################################################################
+  product-service:
+    image: invoiceshelf/product-service:latest
+    container_name: invoiceshelf-test-product-service
+    restart: unless-stopped
+    environment:
+      SERVICE_NAME: product-service
+      SERVICE_PORT: 8003
+      DATABASE_URL: mysql://test_user:test_password@mysql:3306/invoiceshelf_product_test
+      REDIS_URL: redis://redis:6379/3
+      RABBITMQ_URL: amqp://test_user:test_password@rabbitmq:5672/
+      LOG_LEVEL: debug
+      ENABLE_METRICS: "true"
+      METRICS_PORT: 9092
+      DEBUG: "true"
+    ports:
+      - "8003:8003"
+      - "9092:9092"
+    networks:
+      - test-network
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    labels:
+      - "test=true"
+
+  ##############################################################################
+  # Customer Service (Port 8004)
+  ##############################################################################
+  customer-service:
+    image: invoiceshelf/customer-service:latest
+    container_name: invoiceshelf-test-customer-service
+    restart: unless-stopped
+    environment:
+      SERVICE_NAME: customer-service
+      SERVICE_PORT: 8004
+      DATABASE_URL: mysql://test_user:test_password@mysql:3306/invoiceshelf_customer_test
+      REDIS_URL: redis://redis:6379/4
+      RABBITMQ_URL: amqp://test_user:test_password@rabbitmq:5672/
+      LOG_LEVEL: debug
+      ENABLE_METRICS: "true"
+      METRICS_PORT: 9093
+      DEBUG: "true"
+    ports:
+      - "8004:8004"
+      - "9093:9093"
+    networks:
+      - test-network
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8004/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    labels:
+      - "test=true"
+
+  ##############################################################################
+  # Settings Service (Port 8005)
+  ##############################################################################
+  settings-service:
+    image: invoiceshelf/settings-service:latest
+    container_name: invoiceshelf-test-settings-service
+    restart: unless-stopped
+    environment:
+      SERVICE_NAME: settings-service
+      SERVICE_PORT: 8005
+      DATABASE_URL: mysql://test_user:test_password@mysql:3306/invoiceshelf_settings_test
+      REDIS_URL: redis://redis:6379/5
+      RABBITMQ_URL: amqp://test_user:test_password@rabbitmq:5672/
+      LOG_LEVEL: debug
+      ENABLE_METRICS: "true"
+      METRICS_PORT: 9094
+      DEBUG: "true"
+    ports:
+      - "8005:8005"
+      - "9094:9094"
+    networks:
+      - test-network
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8005/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    labels:
+      - "test=true"
+
+  ##############################################################################
+  # Transport Service (Port 8006)
+  ##############################################################################
+  transport-service:
+    image: invoiceshelf/transport-service:latest
+    container_name: invoiceshelf-test-transport-service
+    restart: unless-stopped
+    environment:
+      SERVICE_NAME: transport-service
+      SERVICE_PORT: 8006
+      DATABASE_URL: mysql://test_user:test_password@mysql:3306/invoiceshelf_transport_test
+      REDIS_URL: redis://redis:6379/6
+      RABBITMQ_URL: amqp://test_user:test_password@rabbitmq:5672/
+      LOG_LEVEL: debug
+      ENABLE_METRICS: "true"
+      METRICS_PORT: 9095
+      DEBUG: "true"
+    ports:
+      - "8006:8006"
+      - "9095:9095"
+    networks:
+      - test-network
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8006/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    labels:
+      - "test=true"
+
+  ##############################################################################
+  # Kong API Gateway (Port 8000)
+  ##############################################################################
+  kong-db:
+    image: postgres:15-alpine
+    container_name: invoiceshelf-test-kong-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: kong
+      POSTGRES_USER: kong
+      POSTGRES_PASSWORD: kong_password
+    networks:
+      - test-network
+    volumes:
+      - kong-test-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kong"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    labels:
+      - "test=true"
+
+  kong-migrations:
+    image: kong:3.4-alpine
+    container_name: invoiceshelf-test-kong-migrations
+    command: kong migrations bootstrap
+    depends_on:
+      kong-db:
+        condition: service_healthy
+    networks:
+      - test-network
+    environment:
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: kong-db
+      KONG_PG_PORT: 5432
+      KONG_PG_USER: kong
+      KONG_PG_PASSWORD: kong_password
+      KONG_PG_DATABASE: kong
+    restart: on-failure
+    labels:
+      - "test=true"
+
+  kong:
+    image: kong:3.4-alpine
+    container_name: invoiceshelf-test-kong
+    restart: unless-stopped
+    depends_on:
+      kong-db:
+        condition: service_healthy
+      kong-migrations:
+        condition: service_completed_successfully
+    networks:
+      - test-network
+    ports:
+      - "8000:8000"
+      - "8443:8443"
+      - "8001:8001"
+      - "8444:8444"
+    environment:
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: kong-db
+      KONG_PG_PORT: 5432
+      KONG_PG_USER: kong
+      KONG_PG_PASSWORD: kong_password
+      KONG_PG_DATABASE: kong
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001
+      KONG_PROXY_LISTEN: 0.0.0.0:8000
+      KONG_LOG_LEVEL: info
+    healthcheck:
+      test: ["CMD", "kong", "health"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    labels:
+      - "test=true"
+
+networks:
+  test-network:
+    driver: bridge
+
+volumes:
+  mysql-test-data:
+    driver: local
+  redis-test-data:
+    driver: local
+  kong-test-db:
+    driver: local

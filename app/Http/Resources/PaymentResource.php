@@ -1,0 +1,46 @@
+<?php
+
+namespace App\Http\Resources;
+
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
+
+class PaymentResource extends JsonResource
+{
+    /**
+     * Transform the resource into an array.
+     *
+     * @param  Request  $request
+     */
+    public function toArray($request): array
+    {
+        return [
+            'id' => $this->id,
+            'payment_number' => $this->payment_number,
+            'payment_date' => $this->payment_date,
+            'notes' => $this->getNotes(),
+            'amount' => $this->amount,
+            'unique_hash' => $this->unique_hash,
+            'invoice_id' => $this->invoice_id,
+            'company_id' => $this->company_id,
+            'payment_method_id' => $this->payment_method_id,
+            'creator_id' => $this->creator_id,
+            'customer_id' => $this->customer_id,
+            'exchange_rate' => $this->exchange_rate,
+            'base_amount' => $this->base_amount,
+            'currency_id' => $this->currency_id,
+            'transaction_id' => $this->transaction_id,
+            'sequence_number' => $this->sequence_number,
+            'formatted_created_at' => $this->formattedCreatedAt,
+            'formatted_payment_date' => $this->formattedPaymentDate,
+            'payment_pdf_url' => $this->paymentPdfUrl,
+            'customer' => $this->whenLoaded('customer', fn () => new CustomerResource($this->customer)),
+            'invoice' => $this->whenLoaded('invoice', fn () => new InvoiceResource($this->invoice)),
+            'payment_method' => $this->whenLoaded('paymentMethod', fn () => new PaymentMethodResource($this->paymentMethod)),
+            'fields' => $this->whenLoaded('fields', fn () => CustomFieldValueResource::collection($this->fields)),
+            'company' => $this->whenLoaded('company', fn () => new CompanyResource($this->company)),
+            'currency' => $this->whenLoaded('currency', fn () => new CurrencyResource($this->currency)),
+            'transaction' => $this->whenLoaded('transaction', fn () => new TransactionResource($this->transaction)),
+        ];
+    }
+}

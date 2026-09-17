@@ -1,0 +1,221 @@
+version: '3.8'
+
+##############################################################################
+# RabbitMQ Message Queue Stack
+# Includes RabbitMQ, Management UI, and supporting services
+##############################################################################
+
+services:
+  ##############################################################################
+  # RabbitMQ - Message Broker
+  ##############################################################################
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    container_name: invoiceshelf-rabbitmq
+    restart: unless-stopped
+    hostname: rabbitmq
+    environment:
+      # RabbitMQ Configuration
+      RABBITMQ_DEFAULT_USER: invoiceshelf
+      RABBITMQ_DEFAULT_PASS: rabbitmq_password
+      RABBITMQ_DEFAULT_VHOST: /invoiceshelf
+
+      # Management Plugin Settings
+      RABBITMQ_MANAGEMENT_TCP_PORT: 15672
+      RABBITMQ_MANAGEMENT_SSL_PORT: 15671
+
+      # Performance & Resource Configuration
+      RABBITMQ_SYSTEM_CPU_THRESHOLD: 0.0
+      RABBITMQ_MEMORY_HIGH_WATERMARK: 0.6
+
+      # Network & Protocol Settings
+      RABBITMQ_TCP_LISTEN_OPTIONS: |
+        [{backlog,4096},
+         {nodelay,true},
+         {exit_on_close,false},
+         {keepalive,true}]
+
+      # Clustering (single node, can be extended)
+      RABBITMQ_CLUSTER_PARTITION_HANDLING: autoheal
+      RABBITMQ_ERLANG_COOKIE: invoiceshelf-erlang-cookie
+
+      # Plugins
+      RABBITMQ_PLUGINS: rabbitmq_management rabbitmq_federation rabbitmq_stomp rabbitmq_mqtt
+
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+      - rabbitmq-logs:/var/log/rabbitmq
+      - ./rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      - ./rabbitmq-definitions.json:/etc/rabbitmq/definitions.json:ro
+    networks:
+      - invoiceshelf-network
+    ports:
+      - "5672:5672"      # AMQP protocol
+      - "5671:5671"      # AMQP SSL
+      - "15672:15672"    # Management HTTP
+      - "15671:15671"    # Management HTTPS
+      - "1883:1883"      # MQTT protocol
+      - "8883:8883"      # MQTT SSL
+      - "61613:61613"    # STOMP protocol
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    labels:
+      - "com.example.description=RabbitMQ Message Broker"
+
+  ##############################################################################
+  # RabbitMQ Exporter - Prometheus Metrics
+  ##############################################################################
+  rabbitmq-exporter:
+    image: kbudde/rabbitmq-exporter:latest
+    container_name: invoiceshelf-rabbitmq-exporter
+    restart: unless-stopped
+    depends_on:
+      - rabbitmq
+    environment:
+      RABBIT_USER: invoiceshelf
+      RABBIT_PASSWORD: rabbitmq_password
+      RABBIT_HOST: rabbitmq
+      RABBIT_PORT: 15672
+      PUBLISH_PORT: 9419
+    networks:
+      - invoiceshelf-network
+    ports:
+      - "9419:9419"
+    labels:
+      - "com.example.description=RabbitMQ Prometheus Exporter"
+
+  ##############################################################################
+  # Queue Monitoring Service (Optional - Real-time Queue Monitor)
+  ##############################################################################
+  rabbitmq-queue-monitor:
+    image: python:3.11-slim
+    container_name: invoiceshelf-rabbitmq-monitor
+    restart: unless-stopped
+    depends_on:
+      - rabbitmq
+    working_dir: /app
+    command: python -m http.server 8200 --directory /app
+    volumes:
+      - ./queue-monitor:/app:ro
+    networks:
+      - invoiceshelf-network
+    ports:
+      - "8200:8200"
+    labels:
+      - "com.example.description=RabbitMQ Queue Monitor UI"
+    profiles:
+      - optional
+
+  ##############################################################################
+  # Dead Letter Queue Handler (Optional)
+  ##############################################################################
+  dlq-handler:
+    image: python:3.11-slim
+    container_name: invoiceshelf-dlq-handler
+    restart: unless-stopped
+    depends_on:
+      - rabbitmq
+    working_dir: /app
+    command: python dlq_handler.py
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: invoiceshelf
+      RABBITMQ_PASSWORD: rabbitmq_password
+      RABBITMQ_VHOST: /invoiceshelf
+      DLQ_EXCHANGE: invoiceshelf.dlq
+      DLQ_QUEUE: invoiceshelf.dlq.queue
+    volumes:
+      - ./dlq-handler:/app:ro
+    networks:
+      - invoiceshelf-network
+    labels:
+      - "com.example.description=Dead Letter Queue Handler"
+    profiles:
+      - optional
+
+  ##############################################################################
+  # Message Archive Service (Optional - Persistent Message Storage)
+  ##############################################################################
+  message-archive-db:
+    image: postgres:15-alpine
+    container_name: invoiceshelf-message-archive-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: message_archive
+      POSTGRES_USER: archive_user
+      POSTGRES_PASSWORD: archive_password
+    volumes:
+      - message-archive-data:/var/lib/postgresql/data
+    networks:
+      - invoiceshelf-network
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U archive_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    labels:
+      - "com.example.description=Message Archive Database"
+    profiles:
+      - optional
+
+  ##############################################################################
+  # Jaeger - Distributed Tracing
+  ##############################################################################
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: invoiceshelf-jaeger
+    restart: unless-stopped
+    environment:
+      COLLECTOR_ZIPKIN_HOST_PORT: ":9411"
+      SPAN_STORAGE_TYPE: badger
+      BADGER_EPHEMERAL: "false"
+      BADGER_DIRECTORY_VALUE: /badger/data
+      BADGER_DIRECTORY_KEY: /badger/key
+    volumes:
+      - jaeger-data:/badger
+    networks:
+      - invoiceshelf-network
+    ports:
+      - "6831:6831/udp"  # Jaeger agent UDP (default)
+      - "6832:6832/udp"  # Jaeger agent UDP (compact)
+      - "5778:5778"      # Jaeger agent HTTP
+      - "16686:16686"    # Jaeger UI
+      - "14268:14268"    # Jaeger collector HTTP
+      - "9411:9411"      # Zipkin compatible endpoint
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:14268/api/traces"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    labels:
+      - "com.example.description=Jaeger Distributed Tracing"
+
+##############################################################################
+# Network Configuration
+##############################################################################
+
+networks:
+  invoiceshelf-network:
+    external: true
+
+##############################################################################
+# Volume Definitions
+##############################################################################
+
+volumes:
+  rabbitmq-data:
+    driver: local
+  rabbitmq-logs:
+    driver: local
+  message-archive-data:
+    driver: local
+    profiles:
+      - optional
+  jaeger-data:
+    driver: local

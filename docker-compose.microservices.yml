@@ -1,0 +1,313 @@
+###############################################################################
+# Docker Compose: Microservices Stack
+# 6 DDD Domain Microservices for InvoiceShelf
+# Usage: docker-compose -f docker-compose.microservices.yml -f docker-compose.kong.yml up
+###############################################################################
+
+version: '3.8'
+
+services:
+  ##############################################################################
+  # 1. Invoice Domain Service (Port 8001)
+  ##############################################################################
+  invoice-service:
+    image: invoiceshelf/invoice-service:latest
+    container_name: invoiceshelf-invoice-service
+    restart: unless-stopped
+    environment:
+      SERVICE_NAME: invoice-service
+      SERVICE_PORT: 8001
+      DATABASE_URL: mysql://app:password@mysql:3306/invoiceshelf_invoice
+      REDIS_URL: redis://redis:6379/1
+      LOG_LEVEL: info
+      ENABLE_METRICS: "true"
+      METRICS_PORT: 9090
+    ports:
+      - "8001:8001"      # Service Port
+      - "9090:9090"      # Metrics Port
+    networks:
+      - invoiceshelf-network
+    depends_on:
+      - mysql
+      - redis
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - ./services/invoice:/app
+    labels:
+      - "com.example.description=Invoice Domain Service"
+      - "com.example.version=1.0"
+      - "traefik.enable=true"
+      - "traefik.http.routers.invoice.rule=PathPrefix(`/api/v1/invoices`)"
+      - "traefik.http.services.invoice.loadbalancer.server.port=8001"
+
+  ##############################################################################
+  # 2. Expense/Product Domain Service (Port 8002)
+  ##############################################################################
+  expense-service:
+    image: invoiceshelf/expense-service:latest
+    container_name: invoiceshelf-expense-service
+    restart: unless-stopped
+    environment:
+      SERVICE_NAME: expense-service
+      SERVICE_PORT: 8002
+      DATABASE_URL: mysql://app:password@mysql:3306/invoiceshelf_expense
+      REDIS_URL: redis://redis:6379/2
+      LOG_LEVEL: info
+      ENABLE_METRICS: "true"
+      METRICS_PORT: 9091
+    ports:
+      - "8002:8002"      # Service Port
+      - "9091:9091"      # Metrics Port
+    networks:
+      - invoiceshelf-network
+    depends_on:
+      - mysql
+      - redis
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - ./services/expense:/app
+    labels:
+      - "com.example.description=Expense Domain Service"
+      - "com.example.version=1.0"
+
+  ##############################################################################
+  # 3. Product Catalog Service (Port 8003)
+  ##############################################################################
+  product-service:
+    image: invoiceshelf/product-service:latest
+    container_name: invoiceshelf-product-service
+    restart: unless-stopped
+    environment:
+      SERVICE_NAME: product-service
+      SERVICE_PORT: 8003
+      DATABASE_URL: mysql://app:password@mysql:3306/invoiceshelf_product
+      REDIS_URL: redis://redis:6379/3
+      LOG_LEVEL: info
+      ENABLE_METRICS: "true"
+      METRICS_PORT: 9092
+    ports:
+      - "8003:8003"      # Service Port
+      - "9092:9092"      # Metrics Port
+    networks:
+      - invoiceshelf-network
+    depends_on:
+      - mysql
+      - redis
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - ./services/product:/app
+    labels:
+      - "com.example.description=Product Catalog Service"
+      - "com.example.version=1.0"
+
+  ##############################################################################
+  # 4. Customer Portal Service (Port 8004)
+  ##############################################################################
+  customer-service:
+    image: invoiceshelf/customer-service:latest
+    container_name: invoiceshelf-customer-service
+    restart: unless-stopped
+    environment:
+      SERVICE_NAME: customer-service
+      SERVICE_PORT: 8004
+      DATABASE_URL: mysql://app:password@mysql:3306/invoiceshelf_customer
+      REDIS_URL: redis://redis:6379/4
+      LOG_LEVEL: info
+      ENABLE_METRICS: "true"
+      METRICS_PORT: 9093
+    ports:
+      - "8004:8004"      # Service Port
+      - "9093:9093"      # Metrics Port
+    networks:
+      - invoiceshelf-network
+    depends_on:
+      - mysql
+      - redis
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8004/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - ./services/customer:/app
+    labels:
+      - "com.example.description=Customer Portal Service"
+      - "com.example.version=1.0"
+
+  ##############################################################################
+  # 5. Settings/Configuration Service (Port 8005)
+  ##############################################################################
+  settings-service:
+    image: invoiceshelf/settings-service:latest
+    container_name: invoiceshelf-settings-service
+    restart: unless-stopped
+    environment:
+      SERVICE_NAME: settings-service
+      SERVICE_PORT: 8005
+      DATABASE_URL: mysql://app:password@mysql:3306/invoiceshelf_settings
+      REDIS_URL: redis://redis:6379/5
+      LOG_LEVEL: info
+      ENABLE_METRICS: "true"
+      METRICS_PORT: 9094
+    ports:
+      - "8005:8005"      # Service Port
+      - "9094:9094"      # Metrics Port
+    networks:
+      - invoiceshelf-network
+    depends_on:
+      - mysql
+      - redis
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8005/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - ./services/settings:/app
+    labels:
+      - "com.example.description=Settings/Configuration Service"
+      - "com.example.version=1.0"
+
+  ##############################################################################
+  # 6. Transport/Logistics Service (Port 8006)
+  ##############################################################################
+  transport-service:
+    image: invoiceshelf/transport-service:latest
+    container_name: invoiceshelf-transport-service
+    restart: unless-stopped
+    environment:
+      SERVICE_NAME: transport-service
+      SERVICE_PORT: 8006
+      DATABASE_URL: mysql://app:password@mysql:3306/invoiceshelf_transport
+      REDIS_URL: redis://redis:6379/6
+      LOG_LEVEL: info
+      ENABLE_METRICS: "true"
+      METRICS_PORT: 9095
+    ports:
+      - "8006:8006"      # Service Port
+      - "9095:9095"      # Metrics Port
+    networks:
+      - invoiceshelf-network
+    depends_on:
+      - mysql
+      - redis
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8006/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - ./services/transport:/app
+    labels:
+      - "com.example.description=Transport/Logistics Service"
+      - "com.example.version=1.0"
+
+  ##############################################################################
+  # MySQL Database (shared across services with database isolation)
+  ##############################################################################
+  mysql:
+    image: mysql:8.0-alpine
+    container_name: invoiceshelf-mysql-services
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_DATABASE: invoiceshelf
+      MYSQL_USER: app
+      MYSQL_PASSWORD: password
+    ports:
+      - "3306:3306"
+    networks:
+      - invoiceshelf-network
+    volumes:
+      - mysql-services-data:/var/lib/mysql
+      - ./scripts/init-databases.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    labels:
+      - "com.example.description=MySQL Database Server"
+
+  ##############################################################################
+  # Redis (shared cache layer)
+  ##############################################################################
+  redis:
+    image: redis:7-alpine
+    container_name: invoiceshelf-redis-services
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass redis_password
+    ports:
+      - "6379:6379"
+    networks:
+      - invoiceshelf-network
+    volumes:
+      - redis-services-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    labels:
+      - "com.example.description=Redis Cache Server"
+
+  ##############################################################################
+  # Logging Aggregator Service (for Kong's HTTP logging)
+  ##############################################################################
+  logging-aggregator:
+    image: fluent/fluent-bit:latest
+    container_name: invoiceshelf-logging-aggregator
+    restart: unless-stopped
+    environment:
+      SERVICE_NAME: logging-aggregator
+    ports:
+      - "9000:9000"      # HTTP listener for Kong logs
+      - "24224:24224"    # Fluent forward protocol
+    networks:
+      - invoiceshelf-network
+    depends_on:
+      - elasticsearch
+    volumes:
+      - ./config/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf:ro
+      - ./logs/fluent-bit:/var/log/fluent-bit
+    labels:
+      - "com.example.description=Log Aggregation Service"
+
+  ##############################################################################
+  # Distributed Tracing (Trace ID injection support)
+  ##############################################################################
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: invoiceshelf-jaeger
+    restart: unless-stopped
+    ports:
+      - "16686:16686"    # Web UI
+      - "6831:6831/udp"  # Agent
+    networks:
+      - invoiceshelf-network
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    labels:
+      - "com.example.description=Jaeger Distributed Tracing"
+
+networks:
+  invoiceshelf-network:
+    driver: bridge
+
+volumes:
+  mysql-services-data:
+    driver: local
+  redis-services-data:
+    driver: local

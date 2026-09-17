@@ -1,0 +1,264 @@
+###############################################################################
+# Docker Compose: Comprehensive Monitoring Stack
+# ELK Stack + Prometheus + Grafana + Jaeger
+# Usage: docker-compose -f docker-compose.microservices.yml -f docker-compose.monitoring.yml up
+###############################################################################
+
+version: '3.8'
+
+services:
+  ##############################################################################
+  # Elasticsearch - Log Storage & Indexing
+  ##############################################################################
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.10.0
+    container_name: invoiceshelf-elasticsearch
+    restart: unless-stopped
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      xpack.security.enrollment.enabled: "false"
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+      ELASTIC_USERNAME: elastic
+      ELASTIC_PASSWORD: changeme
+    ports:
+      - "9200:9200"
+    networks:
+      - invoiceshelf-network
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+      - ./infrastructure/observability/elasticsearch-templates.json:/templates.json:ro
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200 >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    labels:
+      - "com.example.description=Elasticsearch - Log Storage"
+
+  ##############################################################################
+  # Logstash - Log Processing & Pipeline
+  ##############################################################################
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.10.0
+    container_name: invoiceshelf-logstash
+    restart: unless-stopped
+    environment:
+      LS_JAVA_OPTS: "-Xmx256m -Xms256m"
+    ports:
+      - "5000:5000/tcp"
+      - "5000:5000/udp"
+      - "9600:9600"
+    networks:
+      - invoiceshelf-network
+    depends_on:
+      - elasticsearch
+    volumes:
+      - ./infrastructure/observability/logstash-pipeline.conf:/usr/share/logstash/pipeline/logstash.conf:ro
+      - ./infrastructure/observability/logstash-patterns.txt:/usr/share/logstash/patterns/custom:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9600"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    labels:
+      - "com.example.description=Logstash - Log Processing"
+
+  ##############################################################################
+  # Kibana - Log Visualization & UI
+  ##############################################################################
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.10.0
+    container_name: invoiceshelf-kibana
+    restart: unless-stopped
+    environment:
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+      ELASTICSEARCH_USERNAME: elastic
+      ELASTICSEARCH_PASSWORD: changeme
+      xpack.security.enabled: "false"
+    ports:
+      - "5601:5601"
+    networks:
+      - invoiceshelf-network
+    depends_on:
+      - elasticsearch
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5601/api/status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    labels:
+      - "com.example.description=Kibana - Log Visualization"
+
+  ##############################################################################
+  # Prometheus - Metrics Collection & Aggregation
+  ##############################################################################
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: invoiceshelf-prometheus
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    ports:
+      - "9090:9090"
+    networks:
+      - invoiceshelf-network
+    volumes:
+      - ./infrastructure/observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./infrastructure/observability/prometheus-rules.yml:/etc/prometheus/prometheus-rules.yml:ro
+      - prometheus-data:/prometheus
+      - /etc/timezone:/etc/timezone:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9090/-/healthy"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    labels:
+      - "com.example.description=Prometheus - Metrics Storage"
+
+  ##############################################################################
+  # Grafana - Metrics Visualization & Dashboards
+  ##############################################################################
+  grafana:
+    image: grafana/grafana:10.0.0
+    container_name: invoiceshelf-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_INSTALL_PLUGINS: grafana-piechart-panel
+      GF_PATHS_PROVISIONING: /etc/grafana/provisioning
+    ports:
+      - "3000:3000"
+    networks:
+      - invoiceshelf-network
+    depends_on:
+      - prometheus
+      - elasticsearch
+    volumes:
+      - ./infrastructure/observability/grafana-provisioning/:/etc/grafana/provisioning/:ro
+      - ./infrastructure/observability/dashboards/:/var/lib/grafana/dashboards/:ro
+      - grafana-storage:/var/lib/grafana
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    labels:
+      - "com.example.description=Grafana - Metrics Visualization"
+
+  ##############################################################################
+  # AlertManager - Alert Management & Routing
+  ##############################################################################
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: invoiceshelf-alertmanager
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+    ports:
+      - "9093:9093"
+    networks:
+      - invoiceshelf-network
+    volumes:
+      - ./infrastructure/observability/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager-data:/alertmanager
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9093/-/healthy"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    labels:
+      - "com.example.description=AlertManager - Alert Management"
+
+  ##############################################################################
+  # Node Exporter - System Metrics
+  ##############################################################################
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: invoiceshelf-node-exporter
+    restart: unless-stopped
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    ports:
+      - "9100:9100"
+    networks:
+      - invoiceshelf-network
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    labels:
+      - "com.example.description=Node Exporter - System Metrics"
+
+  ##############################################################################
+  # Jaeger - Distributed Tracing
+  ##############################################################################
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: invoiceshelf-jaeger
+    restart: unless-stopped
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+      MEMORY_MAX_TRACES: 10000
+    ports:
+      - "16686:16686"    # Web UI
+      - "6831:6831/udp"  # Agent (Jaeger compact)
+      - "6832:6832/udp"  # Agent (Jaeger binary)
+      - "5775:5775/udp"  # Agent (Zipkin compact)
+      - "5778:5778"      # Agent serve frontend
+      - "14268:14268"    # Collector HTTP
+      - "14250:14250"    # Collector gRPC
+      - "9411:9411"      # Zipkin compatible endpoint
+    networks:
+      - invoiceshelf-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:16686/api/traces"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    labels:
+      - "com.example.description=Jaeger - Distributed Tracing"
+
+  ##############################################################################
+  # cAdvisor - Container Metrics
+  ##############################################################################
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: invoiceshelf-cadvisor
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    networks:
+      - invoiceshelf-network
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    privileged: true
+    labels:
+      - "com.example.description=cAdvisor - Container Metrics"
+
+networks:
+  invoiceshelf-network:
+    driver: bridge
+
+volumes:
+  elasticsearch-data:
+    driver: local
+  prometheus-data:
+    driver: local
+  grafana-storage:
+    driver: local
+  alertmanager-data:
+    driver: local

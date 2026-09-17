@@ -1,0 +1,632 @@
+###############################################################################
+# Docker Compose: Full Microservices Stack
+# =============================================================================
+# Single-entry-point orchestration for the entire InvoiceShelf microservices
+# ecosystem — 6 domain services + PostgreSQL + Redis + RabbitMQ + Kong API
+# Gateway + Prometheus/Grafana monitoring.
+#
+# Usage:
+#   docker-compose -f docker-compose.full.yml up -d              # Start everything
+#   docker-compose -f docker-compose.full.yml up -d --build      # Rebuild & start
+#   docker-compose -f docker-compose.full.yml down              # Stop everything
+#   docker-compose -f docker-compose.full.yml down -v            # Stop & wipe volumes
+#   docker-compose -f docker-compose.full.yml logs -f <service>  # Tail logs
+#
+# Port Map (host:container):
+#   8000  Kong Proxy (public API entry point)
+#   8001  Kong Admin API
+#   8002  Kong Admin GUI (Konga)
+#   8010  Invoice Service     (internal 8001)
+#   8020  Expense Service     (internal 8002)
+#   8030  Product Service     (internal 8003)
+#   8040  Customer Service    (internal 8004)
+#   8050  Settings Service    (internal 8005)
+#   8060  Transport Service   (internal 8006)
+#   5432  PostgreSQL
+#   6379  Redis
+#   5672  RabbitMQ AMQP
+#   15672 RabbitMQ Management UI
+#   9090  Prometheus
+#   3000  Grafana
+#   16686 Jaeger UI
+###############################################################################
+
+version: '3.8'
+
+services:
+  ##############################################################################
+  # INFRASTRUCTURE LAYER
+  ##############################################################################
+
+  # ---------------------------------------------------------------------------
+  # PostgreSQL — Shared database server with per-service database isolation
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:15-alpine
+    container_name: invoiceshelf-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: invoiceshelf
+    ports:
+      - "5432:5432"
+    networks:
+      - invoiceshelf-network
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./scripts/init-databases.sql:/docker-entrypoint-initdb.d/01-init-databases.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    labels:
+      - "com.invoiceshelf.description=PostgreSQL Database Server"
+
+  # ---------------------------------------------------------------------------
+  # Redis — Shared cache, rate-limit store, and session layer
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: invoiceshelf-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    networks:
+      - invoiceshelf-network
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    labels:
+      - "com.invoiceshelf.description=Redis Cache & Rate-Limit Store"
+
+  # ---------------------------------------------------------------------------
+  # RabbitMQ — Message broker for async event-driven communication
+  # ---------------------------------------------------------------------------
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    container_name: invoiceshelf-rabbitmq
+    restart: unless-stopped
+    hostname: rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: invoiceshelf
+      RABBITMQ_DEFAULT_PASS: rabbitmq_password
+      RABBITMQ_DEFAULT_VHOST: /invoiceshelf
+    ports:
+      - "5672:5672"      # AMQP
+      - "15672:15672"    # Management UI
+    networks:
+      - invoiceshelf-network
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+      - ./rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      - ./rabbitmq-definitions.json:/etc/rabbitmq/definitions.json:ro
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+    labels:
+      - "com.invoiceshelf.description=RabbitMQ Message Broker"
+
+  ##############################################################################
+  # MICROSERVICES LAYER
+  # Each service builds from its own directory and connects to the shared
+  # PostgreSQL / Redis / RabbitMQ infrastructure above.
+  # Service ports are remapped to 8010-8060 on the host to avoid conflicts
+  # with Kong (8000-8002) and monitoring (9090, 3000, etc.).
+  ##############################################################################
+
+  # ---------------------------------------------------------------------------
+  # 1. Invoice Service (Node.js/TypeScript) — Port 8010 → 8001
+  # ---------------------------------------------------------------------------
+  invoice-service:
+    build:
+      context: ./services/invoicing
+      dockerfile: Dockerfile
+    container_name: invoiceshelf-invoice-service
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 8001
+      SERVICE_NAME: invoice-service
+      LOG_LEVEL: info
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: invoicing_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      JWT_SECRET: ${JWT_SECRET:-invoiceshelf-dev-jwt-secret-change-in-production}
+      JWT_EXPIRY: 24h
+      RABBITMQ_URL: amqp://invoiceshelf:rabbitmq_password@rabbitmq:5672/invoiceshelf
+      RABBITMQ_VHOST: /invoiceshelf
+      RABBITMQ_QUEUE_INVOICE_CREATED: invoice.created
+      RABBITMQ_QUEUE_INVOICE_UPDATED: invoice.updated
+      RABBITMQ_QUEUE_INVOICE_DELETED: invoice.deleted
+      METRICS_ENABLED: "true"
+      METRICS_PORT: 9090
+      LOG_FORMAT: json
+    ports:
+      - "8010:8001"
+    networks:
+      - invoiceshelf-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    labels:
+      - "com.invoiceshelf.description=Invoice Domain Service"
+      - "com.invoiceshelf.port=8001"
+
+  # ---------------------------------------------------------------------------
+  # 2. Expense Service (Python/FastAPI) — Port 8020 → 8002
+  # ---------------------------------------------------------------------------
+  expense-service:
+    build:
+      context: ./services/expense
+      dockerfile: Dockerfile
+    container_name: invoiceshelf-expense-service
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/expense_service
+      DATABASE_POOL_SIZE: "20"
+      DATABASE_MAX_OVERFLOW: "40"
+      DATABASE_ECHO: "false"
+      SERVICE_HOST: 0.0.0.0
+      SERVICE_PORT: "8002"
+      SERVICE_NAME: expense-service
+      SERVICE_ENV: production
+      DEBUG: "false"
+      JWT_SECRET_KEY: ${JWT_SECRET:-invoiceshelf-dev-jwt-secret-change-in-production}
+      JWT_ALGORITHM: HS256
+      JWT_EXPIRATION_HOURS: "24"
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: "5672"
+      RABBITMQ_USER: invoiceshelf
+      RABBITMQ_PASSWORD: rabbitmq_password
+      RABBITMQ_VHOST: /invoiceshelf
+      RABBITMQ_EXCHANGE_NAME: invoiceshelf_events
+      RABBITMQ_QUEUE_PREFIX: expense_service
+      LOG_LEVEL: INFO
+      LOG_FORMAT: json
+      ENABLE_METRICS: "true"
+      METRICS_PORT: "8003"
+      ALLOWED_ORIGINS: http://localhost:3000,http://localhost:8000
+    ports:
+      - "8020:8002"
+    networks:
+      - invoiceshelf-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+    labels:
+      - "com.invoiceshelf.description=Expense Domain Service"
+      - "com.invoiceshelf.port=8002"
+
+  # ---------------------------------------------------------------------------
+  # 3. Product Service (Go) — Port 8030 → 8003
+  # ---------------------------------------------------------------------------
+  product-service:
+    build:
+      context: ./services/product-service
+      dockerfile: Dockerfile
+    container_name: invoiceshelf-product-service
+    restart: unless-stopped
+    environment:
+      PORT: "8003"
+      APP_ENV: production
+      LOG_LEVEL: info
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: product_service
+      DB_SSL_MODE: disable
+      DB_MAX_IDLE_CONNS: "10"
+      DB_MAX_OPEN_CONNS: "100"
+      DB_CONN_MAX_LIFETIME: "3600"
+      JWT_SECRET: ${JWT_SECRET:-invoiceshelf-dev-jwt-secret-change-in-production}
+      JWT_EXPIRATION: "86400"
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: "5672"
+      RABBITMQ_USER: invoiceshelf
+      RABBITMQ_PASSWORD: rabbitmq_password
+      RABBITMQ_VHOST: /invoiceshelf
+      METRICS_PORT: "9090"
+      SERVICE_NAME: product-service
+      SERVICE_VERSION: 1.0.0
+    ports:
+      - "8030:8003"
+    networks:
+      - invoiceshelf-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8003/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    labels:
+      - "com.invoiceshelf.description=Product Catalog Service"
+      - "com.invoiceshelf.port=8003"
+
+  # ---------------------------------------------------------------------------
+  # 4. Customer Service (Node.js/TypeScript) — Port 8040 → 8004
+  # ---------------------------------------------------------------------------
+  customer-service:
+    build:
+      context: ./services/customer
+      dockerfile: Dockerfile
+    container_name: invoiceshelf-customer-service
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "8004"
+      SERVICE_NAME: customer-service
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_DATABASE: customer_service
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      DB_POOL_MIN: "2"
+      DB_POOL_MAX: "10"
+      DB_SSL: "false"
+      JWT_SECRET: ${JWT_SECRET:-invoiceshelf-dev-jwt-secret-change-in-production}
+      JWT_EXPIRY: 7d
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-invoiceshelf-dev-refresh-secret-change-in-production}
+      JWT_REFRESH_EXPIRY: 30d
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: "5672"
+      RABBITMQ_USERNAME: invoiceshelf
+      RABBITMQ_PASSWORD: rabbitmq_password
+      RABBITMQ_VHOST: /invoiceshelf
+      RABBITMQ_QUEUE_CUSTOMER_EVENTS: customer.events
+      RABBITMQ_EXCHANGE_CUSTOMERS: customers
+      LOG_LEVEL: info
+      LOG_FORMAT: json
+      METRICS_ENABLED: "true"
+      METRICS_PORT: "9090"
+      TZ: UTC
+    ports:
+      - "8040:8004"
+    networks:
+      - invoiceshelf-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:8004/health',(r)=>{if(r.statusCode!==200)throw new Error(r.statusCode)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 15s
+    labels:
+      - "com.invoiceshelf.description=Customer Portal Service"
+      - "com.invoiceshelf.port=8004"
+
+  # ---------------------------------------------------------------------------
+  # 5. Settings Service (Go) — Port 8050 → 8005
+  # ---------------------------------------------------------------------------
+  settings-service:
+    build:
+      context: ./services/settings-service
+      dockerfile: Dockerfile
+    container_name: invoiceshelf-settings-service
+    restart: unless-stopped
+    environment:
+      PORT: "8005"
+      ENVIRONMENT: production
+      DEBUG: "false"
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: settings_db
+      DB_SSL_MODE: disable
+      JWT_SECRET: ${JWT_SECRET:-invoiceshelf-dev-jwt-secret-change-in-production}
+      JWT_EXPIRY: "3600"
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: "5672"
+      RABBITMQ_USER: invoiceshelf
+      RABBITMQ_PASS: rabbitmq_password
+      LOG_LEVEL: info
+      METRICS_PORT: "9090"
+    ports:
+      - "8050:8005"
+    networks:
+      - invoiceshelf-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8005/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    labels:
+      - "com.invoiceshelf.description=Settings/Configuration Service"
+      - "com.invoiceshelf.port=8005"
+
+  # ---------------------------------------------------------------------------
+  # 6. Transport Service (Python/FastAPI) — Port 8060 → 8006
+  # ---------------------------------------------------------------------------
+  transport-service:
+    build:
+      context: ./transport-service
+      dockerfile: Dockerfile
+    container_name: invoiceshelf-transport-service
+    restart: unless-stopped
+    environment:
+      APP_NAME: Transport Microservice
+      APP_VERSION: 1.0.0
+      DEBUG: "false"
+      HOST: 0.0.0.0
+      PORT: "8006"
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/transport_db
+      DATABASE_ECHO: "false"
+      JWT_SECRET_KEY: ${JWT_SECRET:-invoiceshelf-dev-jwt-secret-change-in-production}
+      JWT_ALGORITHM: HS256
+      JWT_EXPIRATION_HOURS: "24"
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: "5672"
+      RABBITMQ_USER: invoiceshelf
+      RABBITMQ_PASSWORD: rabbitmq_password
+      RABBITMQ_VHOST: /invoiceshelf
+      RABBITMQ_EXCHANGE: transport_exchange
+      RABBITMQ_QUEUE: transport_events
+      LOG_LEVEL: INFO
+      LOG_FORMAT: json
+      METRICS_ENABLED: "true"
+    ports:
+      - "8060:8006"
+    networks:
+      - invoiceshelf-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8006/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+    labels:
+      - "com.invoiceshelf.description=Transport/Logistics Service"
+      - "com.invoiceshelf.port=8006"
+
+  ##############################################################################
+  # API GATEWAY LAYER
+  ##############################################################################
+
+  # ---------------------------------------------------------------------------
+  # Kong API Gateway — Routes external traffic to microservices
+  # ---------------------------------------------------------------------------
+  kong:
+    image: kong:3.4-alpine
+    container_name: invoiceshelf-kong
+    restart: unless-stopped
+    depends_on:
+      kong-db:
+        condition: service_healthy
+      kong-migrations:
+        condition: service_completed_successfully
+    networks:
+      - invoiceshelf-network
+    ports:
+      - "8000:8000"   # Proxy (public API)
+      - "8443:8443"   # Proxy HTTPS
+      - "8001:8001"   # Admin API
+      - "8444:8444"   # Admin API HTTPS
+      - "8002:8002"   # Konga GUI
+    environment:
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: kong-db
+      KONG_PG_PORT: 5432
+      KONG_PG_USER: kong
+      KONG_PG_PASSWORD: kong_password
+      KONG_PG_DATABASE: kong
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001, 0.0.0.0:8444 ssl
+      KONG_PROXY_LISTEN: 0.0.0.0:8000, 0.0.0.0:8443 ssl
+      KONG_STREAM_LISTEN: "off"
+      KONG_PLUGINS: bundled,jwt,key-auth,rate-limiting,cors,proxy-cache,acl,prometheus
+      KONG_LOG_LEVEL: info
+      KONG_DNS_RESOLVER: 127.0.0.11
+      KONG_DNS_ORDER: LAST,SRV,A,CNAME
+      KONG_STATUS_LISTEN: 0.0.0.0:8100
+    volumes:
+      - ./kong.conf:/etc/kong/kong.conf:ro
+    healthcheck:
+      test: ["CMD", "kong", "health"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    labels:
+      - "com.invoiceshelf.description=Kong API Gateway"
+
+  # ---------------------------------------------------------------------------
+  # Kong Database (separate from app PostgreSQL for isolation)
+  # ---------------------------------------------------------------------------
+  kong-db:
+    image: postgres:15-alpine
+    container_name: invoiceshelf-kong-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: kong
+      POSTGRES_USER: kong
+      POSTGRES_PASSWORD: kong_password
+    volumes:
+      - kong-db-data:/var/lib/postgresql/data
+    networks:
+      - invoiceshelf-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kong"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    labels:
+      - "com.invoiceshelf.description=Kong Database"
+
+  # ---------------------------------------------------------------------------
+  # Kong Migrations — One-shot bootstrap of Kong's schema
+  # ---------------------------------------------------------------------------
+  kong-migrations:
+    image: kong:3.4-alpine
+    container_name: invoiceshelf-kong-migrations
+    command: kong migrations bootstrap
+    depends_on:
+      kong-db:
+        condition: service_healthy
+    networks:
+      - invoiceshelf-network
+    environment:
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: kong-db
+      KONG_PG_PORT: 5432
+      KONG_PG_USER: kong
+      KONG_PG_PASSWORD: kong_password
+      KONG_PG_DATABASE: kong
+    restart: on-failure
+    labels:
+      - "com.invoiceshelf.description=Kong DB Migrations"
+
+  ##############################################################################
+  # MONITORING LAYER
+  ##############################################################################
+
+  # ---------------------------------------------------------------------------
+  # Prometheus — Metrics scraping & storage
+  # ---------------------------------------------------------------------------
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: invoiceshelf-prometheus
+    restart: unless-stopped
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.enable-lifecycle'
+    networks:
+      - invoiceshelf-network
+    ports:
+      - "9090:9090"
+    depends_on:
+      - invoice-service
+      - expense-service
+      - product-service
+      - customer-service
+      - settings-service
+      - transport-service
+    labels:
+      - "com.invoiceshelf.description=Prometheus Metrics Server"
+
+  # ---------------------------------------------------------------------------
+  # Grafana — Dashboards & visualization
+  # ---------------------------------------------------------------------------
+  grafana:
+    image: grafana/grafana:latest
+    container_name: invoiceshelf-grafana
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_INSTALL_PLUGINS: grafana-piechart-panel
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+    networks:
+      - invoiceshelf-network
+    ports:
+      - "3000:3000"
+    labels:
+      - "com.invoiceshelf.description=Grafana Dashboard"
+
+  # ---------------------------------------------------------------------------
+  # Jaeger — Distributed tracing
+  # ---------------------------------------------------------------------------
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: invoiceshelf-jaeger
+    restart: unless-stopped
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    networks:
+      - invoiceshelf-network
+    ports:
+      - "16686:16686"   # Web UI
+      - "14268:14268"    # Collector HTTP
+    labels:
+      - "com.invoiceshelf.description=Jaeger Distributed Tracing"
+
+##############################################################################
+# NETWORKS
+##############################################################################
+networks:
+  invoiceshelf-network:
+    driver: bridge
+    name: invoiceshelf-network
+
+##############################################################################
+# VOLUMES
+##############################################################################
+volumes:
+  postgres-data:
+    driver: local
+  redis-data:
+    driver: local
+  rabbitmq-data:
+    driver: local
+  kong-db-data:
+    driver: local
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local

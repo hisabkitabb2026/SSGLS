@@ -1,0 +1,429 @@
+openapi: 3.0.0
+info:
+  title: Invoicing Microservice API
+  version: 1.0.0
+  description: Production-ready invoicing microservice with multi-company tenancy
+  contact:
+    name: InvoiceShelf Team
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:8001
+    description: Development
+  - url: https://api.example.com
+    description: Production
+
+paths:
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Service health check
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  service:
+                    type: string
+                    example: invoicing-microservice
+                  timestamp:
+                    type: string
+                    format: date-time
+                  uptime:
+                    type: number
+                    example: 123.45
+                  database:
+                    type: string
+                    example: connected
+        '503':
+          description: Service unavailable
+
+  /ready:
+    get:
+      tags:
+        - Health
+      summary: Readiness check
+      responses:
+        '200':
+          description: Service is ready
+        '503':
+          description: Service not ready
+
+  /metrics:
+    get:
+      tags:
+        - Monitoring
+      summary: Prometheus metrics
+      responses:
+        '200':
+          description: Prometheus metrics in text format
+
+  /api/v1/invoices:
+    post:
+      tags:
+        - Invoices
+      summary: Create invoice
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: company-id
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateInvoiceRequest'
+      responses:
+        '201':
+          description: Invoice created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    $ref: '#/components/schemas/Invoice'
+        '400':
+          description: Bad request
+        '401':
+          description: Unauthorized
+
+    get:
+      tags:
+        - Invoices
+      summary: List invoices
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: company-id
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, sent, paid, overdue, cancelled]
+        - name: customerId
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: List of invoices
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Invoice'
+                  pagination:
+                    type: object
+                    properties:
+                      limit:
+                        type: integer
+                      offset:
+                        type: integer
+                      total:
+                        type: integer
+
+  /api/v1/invoices/{id}:
+    get:
+      tags:
+        - Invoices
+      summary: Get invoice by ID
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: company-id
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Invoice details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/Invoice'
+        '404':
+          description: Invoice not found
+
+    patch:
+      tags:
+        - Invoices
+      summary: Update invoice
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: company-id
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateInvoiceRequest'
+      responses:
+        '200':
+          description: Invoice updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/Invoice'
+
+    delete:
+      tags:
+        - Invoices
+      summary: Delete invoice
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: company-id
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Invoice deleted
+        '404':
+          description: Invoice not found
+        '400':
+          description: Cannot delete invoice in current status
+
+  /api/v1/invoices/status/{status}:
+    get:
+      tags:
+        - Invoices
+      summary: Get invoices by status
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: company-id
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: status
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [draft, sent, paid, overdue, cancelled]
+      responses:
+        '200':
+          description: Invoices with given status
+
+  /api/v1/invoices/stats/summary:
+    get:
+      tags:
+        - Invoices
+      summary: Get invoice statistics
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: company-id
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Invoice statistics
+
+components:
+  schemas:
+    Invoice:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        companyId:
+          type: string
+          format: uuid
+        invoiceNumber:
+          type: string
+          example: INV-202401-00001
+        customerId:
+          type: string
+          format: uuid
+        customerName:
+          type: string
+        customerEmail:
+          type: string
+          format: email
+        amount:
+          type: number
+          format: decimal
+        taxAmount:
+          type: number
+          format: decimal
+        totalAmount:
+          type: number
+          format: decimal
+        currency:
+          type: string
+          default: USD
+        status:
+          type: string
+          enum: [draft, sent, paid, overdue, cancelled]
+        invoiceDate:
+          type: string
+          format: date-time
+        dueDate:
+          type: string
+          format: date-time
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              description:
+                type: string
+              quantity:
+                type: number
+              unitPrice:
+                type: number
+              totalPrice:
+                type: number
+        notes:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateInvoiceRequest:
+      type: object
+      required:
+        - customerId
+        - customerName
+        - amount
+        - taxAmount
+        - invoiceDate
+        - dueDate
+      properties:
+        customerId:
+          type: string
+        customerName:
+          type: string
+        customerEmail:
+          type: string
+          format: email
+        amount:
+          type: number
+        taxAmount:
+          type: number
+        currency:
+          type: string
+          default: USD
+        invoiceDate:
+          type: string
+          format: date-time
+        dueDate:
+          type: string
+          format: date-time
+        items:
+          type: array
+          items:
+            type: object
+        notes:
+          type: string
+
+    UpdateInvoiceRequest:
+      type: object
+      properties:
+        customerName:
+          type: string
+        customerEmail:
+          type: string
+        amount:
+          type: number
+        taxAmount:
+          type: number
+        currency:
+          type: string
+        invoiceDate:
+          type: string
+          format: date-time
+        dueDate:
+          type: string
+          format: date-time
+        items:
+          type: array
+        notes:
+          type: string
+        status:
+          type: string
+          enum: [draft, sent, paid, overdue, cancelled]
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

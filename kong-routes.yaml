@@ -1,0 +1,533 @@
+# Kong Routes Configuration
+# URL mappings and routing rules for InvoiceShelf API
+
+---
+# Invoice Routes
+- name: invoice-list
+  service: invoice-service
+  paths:
+    - /api/v1/invoices
+  methods:
+    - GET
+  strip_path: false
+  tags:
+    - domain:invoice
+    - list
+  enabled: true
+
+---
+- name: invoice-create
+  service: invoice-service
+  paths:
+    - /api/v1/invoices
+  methods:
+    - POST
+  strip_path: false
+  tags:
+    - domain:invoice
+    - create
+  enabled: true
+
+---
+- name: invoice-detail
+  service: invoice-service
+  paths:
+    - /api/v1/invoices/(?<id>[0-9]+)
+  regex_priority: 10
+  methods:
+    - GET
+  strip_path: false
+  tags:
+    - domain:invoice
+    - detail
+  enabled: true
+
+---
+- name: invoice-update
+  service: invoice-service
+  paths:
+    - /api/v1/invoices/(?<id>[0-9]+)
+  regex_priority: 10
+  methods:
+    - PUT
+    - PATCH
+  strip_path: false
+  tags:
+    - domain:invoice
+    - update
+  enabled: true
+
+---
+- name: invoice-delete
+  service: invoice-service
+  paths:
+    - /api/v1/invoices/(?<id>[0-9]+)
+  regex_priority: 10
+  methods:
+    - DELETE
+  strip_path: false
+  tags:
+    - domain:invoice
+    - delete
+  enabled: true
+
+---
+- name: invoice-pdf
+  service: invoice-service
+  paths:
+    - /api/v1/invoices/(?<id>[0-9]+)/pdf
+  regex_priority: 15
+  methods:
+    - GET
+    - POST
+  strip_path: false
+  tags:
+    - domain:invoice
+    - pdf
+  enabled: true
+
+---
+# Estimate Routes
+- name: estimate-list
+  service: estimate-service
+  paths:
+    - /api/v1/estimates
+  methods:
+    - GET
+  strip_path: false
+  tags:
+    - domain:estimate
+    - list
+  enabled: true
+
+---
+- name: estimate-create
+  service: estimate-service
+  paths:
+    - /api/v1/estimates
+  methods:
+    - POST
+  strip_path: false
+  tags:
+    - domain:estimate
+    - create
+  enabled: true
+
+---
+- name: estimate-detail
+  service: estimate-service
+  paths:
+    - /api/v1/estimates/(?<id>[0-9]+)
+  regex_priority: 10
+  methods:
+    - GET
+  strip_path: false
+  tags:
+    - domain:estimate
+    - detail
+  enabled: true
+
+---
+- name: estimate-update
+  service: estimate-service
+  paths:
+    - /api/v1/estimates/(?<id>[0-9]+)
+  regex_priority: 10
+  methods:
+    - PUT
+    - PATCH
+  strip_path: false
+  tags:
+    - domain:estimate
+    - update
+  enabled: true
+
+---
+- name: estimate-delete
+  service: estimate-service
+  paths:
+    - /api/v1/estimates/(?<id>[0-9]+)
+  regex_priority: 10
+  methods:
+    - DELETE
+  strip_path: false
+  tags:
+    - domain:estimate
+    - delete
+  enabled: true
+
+---
+# Payment Routes
+- name: payment-list
+  service: payment-service
+  paths:
+    - /api/v1/payments
+  methods:
+    - GET
+  strip_path: false
+  tags:
+    - domain:payment
+    - list
+  enabled: true
+
+---
+- name: payment-create
+  service: payment-service
+  paths:
+    - /api/v1/payments
+  methods:
+    - POST
+  strip_path: false
+  tags:
+    - domain:payment
+    - create
+  enabled: true
+
+---
+- name: payment-detail
+  service: payment-service
+  paths:
+    - /api/v1/payments/(?<id>[0-9]+)
+  regex_priority: 10
+  methods:
+    - GET
+  strip_path: false
+  tags:
+    - domain:payment
+    - detail
+  enabled: true
+
+---
+- name: payment-update
+  service: payment-service
+  paths:
+    - /api/v1/payments/(?<id>[0-9]+)
+  regex_priority: 10
+  methods:
+    - PUT
+    - PATCH
+  strip_path: false
+  tags:
+    - domain:payment
+    - update
+  enabled: true
+
+---
+# Customer Portal Routes
+- name: customer-list
+  service: customer-service
+  paths:
+    - /api/v1/customers
+  methods:
+    - GET
+  strip_path: false
+  tags:
+    - domain:customer
+    - list
+  enabled: true
+
+---
+- name: customer-create
+  service: customer-service
+  paths:
+    - /api/v1/customers
+  methods:
+    - POST
+  strip_path: false
+  tags:
+    - domain:customer
+    - create
+  enabled: true
+
+---
+- name: customer-detail
+  service: customer-service
+  paths:
+    - /api/v1/customers/(?<id>[0-9]+)
+  regex_priority: 10
+  methods:
+    - GET
+  strip_path: false
+  tags:
+    - domain:customer
+    - detail
+  enabled: true
+
+---
+- name: customer-portal
+  service: customer-service
+  paths:
+    - /portal/(?<slug>[a-zA-Z0-9_-]+)(/.*)?
+  regex_priority: 10
+  methods:
+    - GET
+    - POST
+  strip_path: false
+  tags:
+    - domain:customer
+    - portal
+  enabled: true
+
+---
+# Company Routes
+- name: company-list
+  service: company-service
+  paths:
+    - /api/v1/companies
+  methods:
+    - GET
+  strip_path: false
+  tags:
+    - domain:company
+    - list
+  enabled: true
+
+---
+- name: company-create
+  service: company-service
+  paths:
+    - /api/v1/companies
+  methods:
+    - POST
+  strip_path: false
+  tags:
+    - domain:company
+    - create
+  enabled: true
+
+---
+- name: company-detail
+  service: company-service
+  paths:
+    - /api/v1/companies/(?<id>[0-9]+)
+  regex_priority: 10
+  methods:
+    - GET
+  strip_path: false
+  tags:
+    - domain:company
+    - detail
+  enabled: true
+
+---
+- name: company-settings
+  service: settings-service
+  paths:
+    - /api/v1/companies/(?<id>[0-9]+)/settings(/.*)?
+  regex_priority: 15
+  methods:
+    - GET
+    - PUT
+    - PATCH
+  strip_path: false
+  tags:
+    - domain:company
+    - settings
+  enabled: true
+
+---
+# Authentication Routes
+- name: auth-login
+  service: auth-service
+  paths:
+    - /api/v1/auth/login
+  methods:
+    - POST
+  strip_path: false
+  tags:
+    - domain:auth
+    - login
+  enabled: true
+
+---
+- name: auth-logout
+  service: auth-service
+  paths:
+    - /api/v1/auth/logout
+  methods:
+    - POST
+  strip_path: false
+  tags:
+    - domain:auth
+    - logout
+  enabled: true
+
+---
+- name: auth-register
+  service: auth-service
+  paths:
+    - /api/v1/auth/register
+  methods:
+    - POST
+  strip_path: false
+  tags:
+    - domain:auth
+    - register
+  enabled: true
+
+---
+- name: auth-me
+  service: auth-service
+  paths:
+    - /api/v1/auth/me
+  methods:
+    - GET
+  strip_path: false
+  tags:
+    - domain:auth
+    - profile
+  enabled: true
+
+---
+- name: auth-refresh
+  service: auth-service
+  paths:
+    - /api/v1/auth/refresh
+  methods:
+    - POST
+  strip_path: false
+  tags:
+    - domain:auth
+    - refresh
+  enabled: true
+
+---
+# Admin Routes
+- name: admin-dashboard
+  service: admin-service
+  paths:
+    - /api/v1/admin/dashboard
+  methods:
+    - GET
+  strip_path: false
+  tags:
+    - domain:admin
+    - dashboard
+  enabled: true
+
+---
+- name: admin-settings
+  service: settings-service
+  paths:
+    - /api/v1/admin/settings(/.*)?
+  regex_priority: 10
+  methods:
+    - GET
+    - PUT
+    - PATCH
+  strip_path: false
+  tags:
+    - domain:admin
+    - settings
+  enabled: true
+
+---
+# Report Routes
+- name: report-list
+  service: report-service
+  paths:
+    - /api/v1/reports
+  methods:
+    - GET
+  methods_http:
+    - GET
+  strip_path: false
+  tags:
+    - domain:report
+    - list
+  enabled: true
+
+---
+- name: report-export
+  service: report-service
+  paths:
+    - /api/v1/reports/(?<id>[0-9]+)/export
+  regex_priority: 15
+  methods:
+    - GET
+    - POST
+  strip_path: false
+  tags:
+    - domain:report
+    - export
+  enabled: true
+
+---
+# File/Upload Routes
+- name: file-upload
+  service: file-service
+  paths:
+    - /api/v1/files/upload
+  methods:
+    - POST
+    - PUT
+  strip_path: false
+  tags:
+    - domain:file
+    - upload
+  enabled: true
+
+---
+- name: file-download
+  service: file-service
+  paths:
+    - /api/v1/files/(?<id>[a-zA-Z0-9_-]+)/download
+  regex_priority: 15
+  methods:
+    - GET
+  strip_path: false
+  tags:
+    - domain:file
+    - download
+  enabled: true
+
+---
+# Health Check Routes
+- name: health-check
+  service: health-service
+  paths:
+    - /health
+    - /ping
+  methods:
+    - GET
+  strip_path: false
+  tags:
+    - health-check
+  enabled: true
+
+---
+- name: health-readiness
+  service: health-service
+  paths:
+    - /health/ready
+  methods:
+    - GET
+  strip_path: false
+  tags:
+    - health-check
+  enabled: true
+
+---
+- name: health-liveness
+  service: health-service
+  paths:
+    - /health/live
+  methods:
+    - GET
+  strip_path: false
+  tags:
+    - health-check
+  enabled: true
+
+---
+# Catch-all Frontend Route (must be last)
+- name: web-catchall
+  service: web-service
+  paths:
+    - /
+  regex_priority: 0
+  strip_path: false
+  tags:
+    - web
+    - fallback
+  enabled: true

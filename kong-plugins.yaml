@@ -1,0 +1,534 @@
+# Kong Plugins Configuration
+# JWT, Rate Limiting, CORS, and other middleware for InvoiceShelf
+
+---
+# CORS Plugin - Global
+- name: cors
+  config:
+    origins:
+      - http://invoiceshelf.test
+      - http://localhost:5173
+      - http://localhost:3000
+      - http://localhost:8080
+      - https://invoiceshelf.test
+      - https://localhost:5173
+      - https://app.invoiceshelf.local
+    methods:
+      - GET
+      - HEAD
+      - PUT
+      - PATCH
+      - POST
+      - DELETE
+      - OPTIONS
+    headers:
+      - Accept
+      - Accept-Version
+      - Content-Length
+      - Content-MD5
+      - Content-Type
+      - Date
+      - X-Auth-Token
+      - X-API-Key
+      - X-Company-ID
+      - Authorization
+      - X-Requested-With
+    exposed_headers:
+      - X-Auth-Token
+      - X-RateLimit-Limit
+      - X-RateLimit-Remaining
+      - X-RateLimit-Reset
+      - X-Request-ID
+      - Content-Type
+    credentials: true
+    max_age: 3600
+    preflight_continue: false
+  enabled: true
+
+---
+# Request/Response Logging Plugin
+- name: http-log
+  route: null
+  service: null
+  config:
+    http_endpoint: http://logging-service:9000/logs
+    method: POST
+    timeout: 1000
+    keepalive: 60000
+    content_type: application/json
+    flush_timeout: 2
+    retry_count: 5
+    queue_size: 1000
+    queue_timeout: 5
+  enabled: true
+
+---
+# Rate Limiting Plugin - API Routes (500 req/hour)
+- name: rate-limiting
+  route: null
+  service: null
+  config:
+    second: null
+    minute: 500
+    hour: null
+    day: null
+    month: null
+    year: null
+    limit_by: consumer
+    policy: local
+    fault_tolerant: true
+    hide_client_headers: false
+    redis_host: redis
+    redis_port: 6379
+    redis_database: 0
+    redis_password: null
+  tags:
+    - rate-limit
+    - api
+  enabled: true
+
+---
+# Rate Limiting for Public Endpoints - Higher Limit
+- name: rate-limiting
+  route: null
+  service: health-service
+  config:
+    second: 100
+    minute: null
+    hour: null
+    day: null
+    month: null
+    year: null
+    limit_by: ip
+    policy: local
+    fault_tolerant: true
+    hide_client_headers: false
+  tags:
+    - rate-limit
+    - public
+  enabled: true
+
+---
+# JWT Authentication Plugin - Protected Routes
+- name: jwt
+  route: null
+  service: invoice-service
+  config:
+    key_claim_name: iss
+    secret_is_base64: false
+    uri_param_names:
+      - jwt
+    cookie_names:
+      - jwt
+      - auth_token
+    claims_to_verify:
+      - exp
+      - nbf
+    algorithms:
+      - HS256
+      - HS512
+      - RS256
+    rsa_public_key: null
+    scope: null
+    audience: invoiceshelf-api
+  tags:
+    - auth
+    - jwt
+  enabled: true
+
+---
+# JWT for Estimate Service
+- name: jwt
+  route: null
+  service: estimate-service
+  config:
+    key_claim_name: iss
+    secret_is_base64: false
+    uri_param_names:
+      - jwt
+    cookie_names:
+      - jwt
+      - auth_token
+    claims_to_verify:
+      - exp
+      - nbf
+    algorithms:
+      - HS256
+      - HS512
+      - RS256
+    audience: invoiceshelf-api
+  enabled: true
+
+---
+# JWT for Payment Service
+- name: jwt
+  route: null
+  service: payment-service
+  config:
+    key_claim_name: iss
+    secret_is_base64: false
+    uri_param_names:
+      - jwt
+    cookie_names:
+      - jwt
+      - auth_token
+    claims_to_verify:
+      - exp
+      - nbf
+    algorithms:
+      - HS256
+      - HS512
+      - RS256
+    audience: invoiceshelf-api
+  enabled: true
+
+---
+# JWT for Customer Service
+- name: jwt
+  route: null
+  service: customer-service
+  config:
+    key_claim_name: iss
+    secret_is_base64: false
+    uri_param_names:
+      - jwt
+    cookie_names:
+      - jwt
+      - auth_token
+    claims_to_verify:
+      - exp
+      - nbf
+    algorithms:
+      - HS256
+      - HS512
+      - RS256
+    audience: invoiceshelf-api
+  enabled: true
+
+---
+# JWT for Company Service
+- name: jwt
+  route: null
+  service: company-service
+  config:
+    key_claim_name: iss
+    secret_is_base64: false
+    uri_param_names:
+      - jwt
+    cookie_names:
+      - jwt
+      - auth_token
+    claims_to_verify:
+      - exp
+      - nbf
+    algorithms:
+      - HS256
+      - HS512
+      - RS256
+    audience: invoiceshelf-api
+  enabled: true
+
+---
+# Key Authentication for API Keys
+- name: key-auth
+  route: null
+  service: null
+  config:
+    key_names:
+      - apikey
+      - X-API-Key
+    key_in_body: false
+    hide_credentials: true
+  tags:
+    - auth
+    - api-key
+  enabled: true
+
+---
+# Request Size Limiting Plugin
+- name: request-size-limiting
+  route: null
+  service: file-service
+  config:
+    allowed_payload_size: 100
+    size_units: megabytes
+  tags:
+    - file-upload
+  enabled: true
+
+---
+# Response Transformer Plugin - Add Custom Headers
+- name: response-transformer
+  route: null
+  service: null
+  config:
+    add:
+      headers:
+        - X-API-Version:v1
+        - X-Powered-By:InvoiceShelf
+        - X-Request-ID:$request_id
+    append:
+      headers: []
+    replace:
+      headers: []
+    remove:
+      headers:
+        - Server
+    add_if_not_exists:
+      headers: []
+  enabled: true
+
+---
+# Request Transformer - Add Company ID Header
+- name: request-transformer
+  route: null
+  service: null
+  config:
+    add:
+      headers:
+        - X-Kong-Request-Time:$msec
+    append:
+      headers: []
+    replace:
+      headers: []
+    remove:
+      headers: []
+    add_if_not_exists:
+      headers: []
+    http_method: null
+    body:
+      add: []
+      append: []
+      remove: []
+  enabled: true
+
+---
+# Proxy Cache Plugin - Cache GET Requests
+- name: proxy-cache
+  route: null
+  service: invoice-service
+  config:
+    content_type:
+      - application/json
+    cache_ttl: 300
+    strategy: memory
+    cache_control: true
+    vary_headers:
+      - X-Company-ID
+    vary_query_params:
+      - page
+      - limit
+      - sort
+      - filter
+  tags:
+    - caching
+  enabled: true
+
+---
+# Proxy Cache for Reports
+- name: proxy-cache
+  route: null
+  service: report-service
+  config:
+    content_type:
+      - application/json
+    cache_ttl: 600
+    strategy: memory
+    cache_control: true
+    vary_headers:
+      - X-Company-ID
+    vary_query_params:
+      - page
+      - limit
+      - sort
+      - date_from
+      - date_to
+  tags:
+    - caching
+    - reports
+  enabled: true
+
+---
+# IP Restriction - Admin Service
+- name: ip-restriction
+  route: null
+  service: admin-service
+  config:
+    whitelist:
+      - 127.0.0.1
+      - 10.0.0.0/8
+      - 172.16.0.0/12
+      - 192.168.0.0/16
+    blacklist: []
+    status: 403
+    message: Access Denied
+  tags:
+    - admin
+    - security
+  enabled: true
+
+---
+# Request Termination - Deprecated Endpoints
+- name: request-termination
+  route: null
+  service: null
+  config:
+    status_code: 410
+    message: This endpoint has been deprecated. Please use the new API endpoint.
+    content_type: application/json
+    echo: false
+  enabled: false
+
+---
+# ACL Plugin - Role-based Access Control
+- name: acl
+  route: null
+  service: admin-service
+  config:
+    whitelist:
+      - admin
+      - super-admin
+    blacklist: []
+    default_group: user
+    hide_groups_header: false
+  tags:
+    - rbac
+    - admin
+  enabled: true
+
+---
+# ACL for Company Management
+- name: acl
+  route: null
+  service: company-service
+  config:
+    whitelist:
+      - admin
+      - owner
+      - company-manager
+    blacklist: []
+    default_group: user
+    hide_groups_header: false
+  tags:
+    - rbac
+    - company
+  enabled: true
+
+---
+# Statsd Plugin - Metrics Collection
+- name: statsd
+  route: null
+  service: null
+  config:
+    host: statsd
+    port: 8125
+    prefix: kong
+    metrics:
+      - request_count
+      - latency
+      - upstream_latency
+      - request_size
+      - response_size
+      - status_count
+      - unique_users
+      - request_per_user
+    use_hostname: true
+    hostname_in_prefix: true
+    flush_interval: 10
+  tags:
+    - metrics
+    - monitoring
+  enabled: true
+
+---
+# OAuth2 Plugin - Social Login Integration
+- name: oauth2
+  route: null
+  service: auth-service
+  config:
+    scopes:
+      - invoices.read
+      - invoices.write
+      - estimates.read
+      - estimates.write
+      - customers.read
+      - customers.write
+      - payments.read
+      - payments.write
+      - admin.read
+      - admin.write
+    mandatory_scope: false
+    token_expiration: 7200
+    provision_key: invoiceshelf-oauth-key
+    accept_http_if_already_terminated: true
+    auth_header_name: authorization
+    hide_credentials: true
+    global_credentials: false
+    refresh_token_ttl: 2592000
+  tags:
+    - oauth2
+    - auth
+  enabled: true
+
+---
+# Bot Detection Plugin
+- name: bot-detection
+  route: null
+  service: null
+  config:
+    whitelist: []
+    blacklist:
+      - ""
+    denylist:
+      - "bot"
+      - "crawler"
+      - "spider"
+    allow_crawlers: false
+  tags:
+    - security
+    - bot-detection
+  enabled: true
+
+---
+# Datadog Plugin - APM Integration
+- name: datadog
+  route: null
+  service: null
+  config:
+    host: localhost
+    port: 8126
+    sample_rate: 1.0
+    service_name: invoiceshelf-api
+    environment: production
+    tags:
+      - version:1.0
+      - env:production
+  tags:
+    - apm
+    - monitoring
+  enabled: false
+
+---
+# Prometheus Plugin - Metrics Export
+- name: prometheus
+  route: null
+  service: null
+  config:
+    prefix: kong
+    lucene_syntax_disable: false
+    return_all_metrics: false
+    metrics:
+      - request_count
+      - latency
+      - status_count
+      - unique_users
+      - request_per_user
+      - upstream_latency
+      - request_size
+      - response_size
+      - kong_memory_lua_shared_dict_bytes
+      - kong_memory_workers_lua_vms_bytes
+  tags:
+    - metrics
+    - prometheus
+  enabled: true

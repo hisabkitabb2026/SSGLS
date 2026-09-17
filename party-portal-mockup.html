@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Party Portal — Upgraded Design Mockup</title>
+<style>
+  :root {
+    --primary: #4f46e5;
+    --primary-light: #e0e7ff;
+    --primary-dark: #3730a3;
+    --surface: #ffffff;
+    --surface-secondary: #f8fafc;
+    --surface-tertiary: #f1f5f9;
+    --heading: #0f172a;
+    --body: #334155;
+    --muted: #64748b;
+    --subtle: #94a3b8;
+    --line: #e2e8f0;
+    --line-strong: #cbd5e1;
+    --success: #16a34a;
+    --success-bg: #dcfce7;
+    --warning: #d97706;
+    --warning-bg: #fef3c7;
+    --danger: #dc2626;
+    --danger-bg: #fee2e2;
+    --info: #0284c7;
+    --info-bg: #e0f2fe;
+    --purple: #7c3aed;
+    --purple-bg: #f3e8ff;
+  }
+
+  [data-theme="dark"] {
+    --primary: #6366f1;
+    --primary-light: #312e81;
+    --primary-dark: #a5b4fc;
+    --surface: #1e293b;
+    --surface-secondary: #0f172a;
+    --surface-tertiary: #334155;
+    --heading: #f1f5f9;
+    --body: #cbd5e1;
+    --muted: #94a3b8;
+    --subtle: #64748b;
+    --line: #334155;
+    --line-strong: #475569;
+    --success-bg: #14532d;
+    --warning-bg: #78350f;
+    --danger-bg: #7f1d1d;
+    --info-bg: #0c4a6e;
+    --purple-bg: #4c1d95;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--surface-secondary);
+    color: var(--body);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  /* ===== LAYOUT ===== */
+  .app-wrapper { display: flex; min-height: 100vh; }
+
+  /* ===== SIDEBAR ===== */
+  .sidebar {
+    width: 240px;
+    background: var(--surface);
+    border-right: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    z-index: 100;
+    overflow-y: auto;
+  }
+  .sidebar-header {
+    padding: 20px 20px 16px;
+    border-bottom: 1px solid var(--line);
+  }
+  .sidebar-logo {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 18px; font-weight: 700; color: var(--heading);
+  }
+  .sidebar-logo .logo-icon {
+    width: 36px; height: 36px;
+    background: var(--primary);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-size: 18px;
+  }
+  .sidebar-company {
+    font-size: 12px; color: var(--muted); margin-top: 4px; padding-left: 46px;
+  }
+
+  .sidebar-section { padding: 12px 12px 4px; }
+  .sidebar-section-label {
+    font-size: 10px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.05em; color: var(--subtle);
+    padding: 0 8px 8px;
+  }
+  .sidebar-link {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 12px; border-radius: 6px;
+    color: var(--body); text-decoration: none;
+    font-size: 13px; font-weight: 500;
+    transition: all 0.15s;
+    margin-bottom: 2px;
+  }
+  .sidebar-link:hover { background: var(--surface-tertiary); color: var(--heading); }
+  .sidebar-link.active { background: var(--primary); color: white; }
+  .sidebar-link .icon { width: 18px; height: 18px; flex-shrink: 0; }
+  .sidebar-link .badge {
+    margin-left: auto; font-size: 10px; font-weight: 700;
+    padding: 2px 7px; border-radius: 10px;
+    background: var(--danger-bg); color: var(--danger);
+  }
+  .sidebar-link.active .badge { background: rgba(255,255,255,0.2); color: white; }
+
+  .sidebar-footer {
+    margin-top: auto;
+    padding: 12px;
+    border-top: 1px solid var(--line);
+  }
+  .sidebar-user {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px; border-radius: 6px;
+  }
+  .sidebar-user-avatar {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: var(--primary-light); color: var(--primary);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 600; font-size: 14px;
+  }
+  .sidebar-user-info { flex: 1; min-width: 0; }
+  .sidebar-user-name { font-size: 13px; font-weight: 600; color: var(--heading); }
+  .sidebar-user-email { font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* ===== MAIN CONTENT ===== */
+  .main-content {
+    flex: 1; margin-left: 240px; padding: 24px 32px;
+    max-width: calc(100vw - 240px);
+  }
+
+  /* ===== TOP BAR ===== */
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 24px;
+  }
+  .topbar-left h1 { font-size: 22px; font-weight: 700; color: var(--heading); }
+  .topbar-left p { font-size: 13px; color: var(--muted); margin-top: 2px; }
+  .topbar-right { display: flex; align-items: center; gap: 10px; }
+  .theme-toggle {
+    width: 36px; height: 36px; border-radius: 8px;
+    border: 1px solid var(--line); background: var(--surface);
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    color: var(--muted); font-size: 16px;
+  }
+  .theme-toggle:hover { border-color: var(--line-strong); }
+
+  /* ===== KPI CARDS ===== */
+  .kpi-grid {
+    display: grid; gap: 16px;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    margin-bottom: 28px;
+  }
+  .kpi-card {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 10px; padding: 18px;
+    text-decoration: none; color: inherit;
+    transition: all 0.2s;
+  }
+  .kpi-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); transform: translateY(-1px); }
+  .kpi-card-label { font-size: 12px; font-weight: 500; color: var(--muted); }
+  .kpi-card-value { font-size: 26px; font-weight: 700; color: var(--heading); margin-top: 6px; }
+  .kpi-card-sub { font-size: 11px; color: var(--subtle); margin-top: 4px; }
+  .kpi-card-icon {
+    width: 32px; height: 32px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; float: right; margin-top: -4px;
+  }
+  .kpi-card-icon.blue { background: var(--info-bg); color: var(--info); }
+  .kpi-card-icon.green { background: var(--success-bg); color: var(--success); }
+  .kpi-card-icon.amber { background: var(--warning-bg); color: var(--warning); }
+  .kpi-card-icon.purple { background: var(--purple-bg); color: var(--purple); }
+  .kpi-card-icon.red { background: var(--danger-bg); color: var(--danger); }
+
+  /* ===== SECTION HEADER ===== */
+  .section-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .section-title { font-size: 16px; font-weight: 600; color: var(--heading); }
+  .section-link { font-size: 12px; color: var(--primary); text-decoration: none; font-weight: 500; }
+
+  /* ===== TWO COLUMN LAYOUT ===== */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 28px; }
+
+  /* ===== TABLE ===== */
+  .table-card {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 10px; overflow: hidden;
+  }
+  .table-card-header {
+    padding: 14px 18px; border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .table-card-title { font-size: 14px; font-weight: 600; color: var(--heading); }
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    text-align: left; padding: 10px 18px;
+    font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.03em; color: var(--muted);
+    border-bottom: 1px solid var(--line);
+    background: var(--surface-secondary);
+  }
+  tbody td {
+    padding: 12px 18px; font-size: 13px;
+    border-bottom: 1px solid var(--line);
+    color: var(--body);
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: var(--surface-secondary); }
+  .table-link { color: var(--primary); text-decoration: none; font-weight: 500; }
+  .table-link:hover { text-decoration: underline; }
+
+  /* ===== BADGES ===== */
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 10px; border-radius: 20px;
+    font-size: 11px; font-weight: 600;
+  }
+  .badge-success { background: var(--success-bg); color: var(--success); }
+  .badge-warning { background: var(--warning-bg); color: var(--warning); }
+  .badge-danger { background: var(--danger-bg); color: var(--danger); }
+  .badge-info { background: var(--info-bg); color: var(--info); }
+  .badge-purple { background: var(--purple-bg); color: var(--purple); }
+  .badge-muted { background: var(--surface-tertiary); color: var(--muted); }
+
+  /* ===== TIMELINE ===== */
+  .timeline-card {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 10px; padding: 20px;
+  }
+  .timeline { position: relative; padding-left: 28px; }
+  .timeline::before {
+    content: ''; position: absolute; left: 9px; top: 4px; bottom: 4px;
+    width: 2px; background: var(--line);
+  }
+  .timeline-item { position: relative; padding-bottom: 20px; }
+  .timeline-item:last-child { padding-bottom: 0; }
+  .timeline-dot {
+    position: absolute; left: -28px; top: 2px;
+    width: 20px; height: 20px; border-radius: 50%;
+    border: 3px solid var(--surface);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px; color: white;
+  }
+  .timeline-dot.done { background: var(--success); }
+  .timeline-dot.current { background: var(--info); animation: pulse 2s infinite; }
+  .timeline-dot.pending { background: var(--subtle); }
+  .timeline-title { font-size: 13px; font-weight: 600; color: var(--heading); }
+  .timeline-date { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .timeline-detail { font-size: 12px; color: var(--body); margin-top: 4px; }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(2, 132, 199, 0.4); }
+    50% { box-shadow: 0 0 0 6px rgba(2, 132, 199, 0); }
+  }
+
+  /* ===== TRACKING INPUT ===== */
+  .tracking-card {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 10px; padding: 24px; margin-bottom: 24px;
+  }
+  .tracking-input-row { display: flex; gap: 10px; }
+  .tracking-input {
+    flex: 1; padding: 12px 16px; border: 1px solid var(--line);
+    border-radius: 8px; font-size: 14px; color: var(--heading);
+    background: var(--surface-secondary); outline: none;
+  }
+  .tracking-input:focus { border-color: var(--primary); }
+  .btn {
+    padding: 12px 20px; border: none; border-radius: 8px;
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn-primary { background: var(--primary); color: white; }
+  .btn-primary:hover { background: var(--primary-dark); }
+  .btn-outline { background: transparent; border: 1px solid var(--line); color: var(--body); }
+  .btn-outline:hover { border-color: var(--line-strong); }
+
+  /* ===== QUOTATION TABLE ===== */
+  .quotation-table { width: 100%; border-collapse: collapse; }
+  .quotation-table th {
+    background: var(--surface-tertiary); padding: 10px 14px;
+    font-size: 11px; font-weight: 600; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.03em;
+    border-bottom: 1px solid var(--line);
+    text-align: left;
+  }
+  .quotation-table td {
+    padding: 10px 14px; font-size: 13px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  /* ===== FILTER BAR ===== */
+  .filter-bar {
+    display: flex; gap: 10px; align-items: center;
+    margin-bottom: 16px; flex-wrap: wrap;
+  }
+  .filter-input {
+    padding: 8px 12px; border: 1px solid var(--line);
+    border-radius: 6px; font-size: 13px; background: var(--surface);
+    color: var(--heading); outline: none;
+  }
+  .filter-input:focus { border-color: var(--primary); }
+
+  /* ===== PAGE DIVIDER ===== */
+  .page-divider {
+    text-align: center; padding: 40px 0;
+    color: var(--subtle); font-size: 13px;
+  }
+  .page-divider span {
+    background: var(--surface-secondary); padding: 0 16px; position: relative;
+  }
+  .page-divider::before {
+    content: ''; position: absolute; left: 32px; right: 32px;
+    border-top: 1px dashed var(--line);
+  }
+
+  /* ===== DETAIL VIEW ===== */
+  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+  .detail-card {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 10px; padding: 18px;
+  }
+  .detail-card-title {
+    font-size: 12px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.03em; color: var(--muted); margin-bottom: 12px;
+  }
+  .detail-row {
+    display: flex; justify-content: space-between; padding: 6px 0;
+    font-size: 13px;
+  }
+  .detail-row-label { color: var(--muted); }
+  .detail-row-value { font-weight: 500; color: var(--heading); }
+
+  .amount-positive { color: var(--success); font-weight: 600; }
+  .amount-negative { color: var(--danger); font-weight: 600; }
+
+  /* ===== RESPONSIVE ===== */
+  @media (max-width: 768px) {
+    .sidebar { display: none; }
+    .main-content { margin-left: 0; padding: 16px; }
+    .two-col { grid-template-columns: 1fr; }
+    .detail-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body data-theme="light">
+
+<div class="app-wrapper">
+
+  <!-- ===== SIDEBAR ===== -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <div class="logo-icon">🚛</div>
+        <div>
+          SSGLS<br>
+          <span style="font-size:11px;font-weight:400;color:var(--muted)">Transport Portal</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Main</div>
+      <a href="#dashboard" class="sidebar-link active">
+        <span class="icon">📊</span> Dashboard
+      </a>
+      <a href="#track" class="sidebar-link">
+        <span class="icon">🔍</span> Track Consignment
+      </a>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Transport Documents</div>
+      <a href="#lr-receipts" class="sidebar-link">
+        <span class="icon">📄</span> LR Receipts
+        <span class="badge">12</span>
+      </a>
+      <a href="#lorry-receipts" class="sidebar-link">
+        <span class="icon">🚚</span> Lorry Receipts
+      </a>
+      <a href="#office-invoices" class="sidebar-link">
+        <span class="icon">🧾</span> Office Invoices
+      </a>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Logistics</div>
+      <a href="#warehouse" class="sidebar-link">
+        <span class="icon">📦</span> Warehouse
+        <span class="badge">5</span>
+      </a>
+      <a href="#load-trips" class="sidebar-link">
+        <span class="icon">🛣️</span> Load Trips
+      </a>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Financials</div>
+      <a href="#invoices" class="sidebar-link">
+        <span class="icon">💳</span> Invoices
+      </a>
+      <a href="#estimates" class="sidebar-link">
+        <span class="icon">📋</span> Estimates / Quotations
+      </a>
+      <a href="#payments" class="sidebar-link">
+        <span class="icon">💰</span> Payments
+      </a>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Account</div>
+      <a href="#settings" class="sidebar-link">
+        <span class="icon">⚙️</span> Settings
+      </a>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="sidebar-user-avatar">RC</div>
+        <div class="sidebar-user-info">
+          <div class="sidebar-user-name">Reliance Cargo</div>
+          <div class="sidebar-user-email">ops@reliancecargo.in</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ===== MAIN CONTENT ===== -->
+  <main class="main-content">
+
+    <!-- ===== TOP BAR ===== -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <h1>Dashboard</h1>
+        <p>Welcome back, Reliance Cargo — here's your logistics overview</p>
+      </div>
+      <div class="topbar-right">
+        <button class="theme-toggle" onclick="toggleTheme()">🌙</button>
+      </div>
+    </div>
+
+    <!-- ===== KPI CARDS ===== -->
+    <div class="kpi-grid">
+      <a href="#lr-receipts" class="kpi-card">
+        <div class="kpi-card-icon blue">📄</div>
+        <div class="kpi-card-label">Active Consignments</div>
+        <div class="kpi-card-value">12</div>
+        <div class="kpi-card-sub">3 in transit · 9 at warehouse</div>
+      </a>
+      <a href="#warehouse" class="kpi-card">
+        <div class="kpi-card-icon amber">📦</div>
+        <div class="kpi-card-label">Goods in Warehouse</div>
+        <div class="kpi-card-value">9</div>
+        <div class="kpi-card-sub">2 overdue for dispatch</div>
+      </a>
+      <a href="#load-trips" class="kpi-card">
+        <div class="kpi-card-icon purple">🛣️</div>
+        <div class="kpi-card-label">In Transit</div>
+        <div class="kpi-card-value">3</div>
+        <div class="kpi-card-sub">1 expected today</div>
+      </a>
+      <a href="#load-trips" class="kpi-card">
+        <div class="kpi-card-icon green">✅</div>
+        <div class="kpi-card-label">Delivered</div>
+        <div class="kpi-card-value">47</div>
+        <div class="kpi-card-sub">This month</div>
+      </a>
+      <a href="#invoices" class="kpi-card">
+        <div class="kpi-card-icon red">💳</div>
+        <div class="kpi-card-label">Amount Due</div>
+        <div class="kpi-card-value">₹1,24,500</div>
+        <div class="kpi-card-sub">Across 8 invoices</div>
+      </a>
+    </div>
+
+    <!-- ===== RECENT TABLES (2 COL) ===== -->
+    <div class="two-col">
+      <!-- Recent LR Receipts -->
+      <div>
+        <div class="section-header">
+          <div class="section-title">Recent LR Receipts</div>
+          <a href="#lr-receipts" class="section-link">View All →</a>
+        </div>
+        <div class="table-card">
+          <table>
+            <thead>
+              <tr>
+                <th>Docket No</th>
+                <th>Route</th>
+                <th>Date</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><a href="#lr-detail" class="table-link">LR-2026-0148</a></td>
+                <td>Mumbai → Delhi</td>
+                <td>15 Sep</td>
+                <td><span class="badge badge-info">In Transit</span></td>
+              </tr>
+              <tr>
+                <td><a href="#lr-detail" class="table-link">LR-2026-0147</a></td>
+                <td>Chennai → Bangalore</td>
+                <td>14 Sep</td>
+                <td><span class="badge badge-warning">At Warehouse</span></td>
+              </tr>
+              <tr>
+                <td><a href="#lr-detail" class="table-link">LR-2026-0146</a></td>
+                <td>Kolkata → Guwahati</td>
+                <td>13 Sep</td>
+                <td><span class="badge badge-success">Delivered</span></td>
+              </tr>
+              <tr>
+                <td><a href="#lr-detail" class="table-link">LR-2026-0145</a></td>
+                <td>Mumbai → Pune</td>
+                <td>12 Sep</td>
+                <td><span class="badge badge-success">Delivered</span></td>
+              </tr>
+              <tr>
+                <td><a href="#lr-detail" class="table-link">LR-2026-0144</a></td>
+                <td>Delhi → Jaipur</td>
+                <td>11 Sep</td>
+                <td><span class="badge badge-danger">Overdue</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Recent Warehouse Items -->
+      <div>
+        <div class="section-header">
+          <div class="section-title">Warehouse Status</div>
+          <a href="#warehouse" class="section-link">View All →</a>
+        </div>
+        <div class="table-card">
+          <table>
+            <thead>
+              <tr>
+                <th>LR No</th>
+                <th>Destination</th>
+                <th>Days</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>LR-2026-0147</td>
+                <td>Bangalore</td>
+                <td>2</td>
+                <td><span class="badge badge-warning">Stored</span></td>
+              </tr>
+              <tr>
+                <td>LR-2026-0143</td>
+                <td>Guwahati</td>
+                <td>5</td>
+                <td><span class="badge badge-purple">Picked</span></td>
+              </tr>
+              <tr>
+                <td>LR-2026-0141</td>
+                <td>Jaipur</td>
+                <td>8</td>
+                <td><span class="badge badge-danger">Overdue</span></td>
+              </tr>
+              <tr>
+                <td>LR-2026-0139</td>
+                <td>Delhi</td>
+                <td>3</td>
+                <td><span class="badge badge-info">Loaded</span></td>
+              </tr>
+              <tr>
+                <td>LR-2026-0138</td>
+                <td>Pune</td>
+                <td>1</td>
+                <td><span class="badge badge-warning">Stored</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== PAGE DIVIDER ===== -->
+    <div class="page-divider"><span>↓ More screens below ↓</span></div>
+
+    <!-- ===== CONSIGNMENT TRACKING ===== -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <h1>Track Consignment</h1>
+        <p>Enter your docket number to track your shipment in real-time</p>
+      </div>
+    </div>
+
+    <div class="tracking-card">
+      <div class="tracking-input-row">
+        <input type="text" class="tracking-input" placeholder="Enter Docket Number (e.g. LR-2026-0148)" value="LR-2026-0148">
+        <button class="btn btn-primary">🔍 Track Now</button>
+      </div>
+    </div>
+
+    <div class="timeline-card" style="margin-bottom: 28px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div>
+          <div style="font-size: 16px; font-weight: 700; color: var(--heading);">LR-2026-0148</div>
+          <div style="font-size: 13px; color: var(--muted);">Mumbai → Delhi · 1,416 km</div>
+        </div>
+        <span class="badge badge-info" style="font-size: 13px; padding: 6px 14px;">🚚 In Transit</span>
+      </div>
+
+      <div class="timeline">
+        <div class="timeline-item">
+          <div class="timeline-dot done">✓</div>
+          <div class="timeline-title">LR Receipt Created</div>
+          <div class="timeline-date">14 Sep 2026, 10:30 AM</div>
+          <div class="timeline-detail">Docket generated · Consignor: Reliance Cargo · Consignee: Delhi Traders</div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot done">✓</div>
+          <div class="timeline-title">Goods Received at Warehouse</div>
+          <div class="timeline-date">14 Sep 2026, 2:15 PM</div>
+          <div class="timeline-detail">Mumbai Warehouse · Bay 3 · Weight: 2,450 kg · Load Type: Full Load</div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot done">✓</div>
+          <div class="timeline-title">Loaded on Truck</div>
+          <div class="timeline-date">15 Sep 2026, 6:00 AM</div>
+          <div class="timeline-detail">Truck: MH-04-AB-1234 · Driver: Ramesh Kumar · Consolidation Group: CG-0042</div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot current">●</div>
+          <div class="timeline-title">In Transit</div>
+          <div class="timeline-date">15 Sep 2026, 6:30 AM — Current</div>
+          <div class="timeline-detail">Dispatched from Mumbai · Expected delivery: 16 Sep, 6:00 PM</div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot pending"></div>
+          <div class="timeline-title">Out for Delivery</div>
+          <div class="timeline-date">Pending</div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot pending"></div>
+          <div class="timeline-title">Delivered</div>
+          <div class="timeline-date">Pending</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== PAGE DIVIDER ===== -->
+    <div class="page-divider"><span>↓ LR Receipt Detail ↓</span></div>
+
+    <!-- ===== LR RECEIPT DETAIL ===== -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <h1>LR Receipt — LR-2026-0148</h1>
+        <p>Mumbai → Delhi · Created on 14 Sep 2026</p>
+      </div>
+      <div class="topbar-right">
+        <button class="btn btn-outline">📄 Download PDF</button>
+      </div>
+    </div>
+
+    <div class="detail-grid">
+      <div class="detail-card">
+        <div class="detail-card-title">Consignor (Sender)</div>
+        <div class="detail-row"><span class="detail-row-label">Name</span><span class="detail-row-value">Reliance Cargo Pvt Ltd</span></div>
+        <div class="detail-row"><span class="detail-row-label">Phone</span><span class="detail-row-value">+91 98765 43210</span></div>
+        <div class="detail-row"><span class="detail-row-label">Address</span><span class="detail-row-value">Andheri East, Mumbai</span></div>
+      </div>
+      <div class="detail-card">
+        <div class="detail-card-title">Consignee (Receiver)</div>
+        <div class="detail-row"><span class="detail-row-label">Name</span><span class="detail-row-value">Delhi Traders Association</span></div>
+        <div class="detail-row"><span class="detail-row-label">Phone</span><span class="detail-row-value">+91 99876 54321</span></div>
+        <div class="detail-row"><span class="detail-row-label">Address</span><span class="detail-row-value">Okhla Phase 2, New Delhi</span></div>
+      </div>
+    </div>
+
+    <div class="detail-grid">
+      <div class="detail-card">
+        <div class="detail-card-title">Shipment Details</div>
+        <div class="detail-row"><span class="detail-row-label">From</span><span class="detail-row-value">Mumbai</span></div>
+        <div class="detail-row"><span class="detail-row-label">To</span><span class="detail-row-value">Delhi</span></div>
+        <div class="detail-row"><span class="detail-row-label">Distance</span><span class="detail-row-value">1,416 km</span></div>
+        <div class="detail-row"><span class="detail-row-label">Load Type</span><span class="detail-row-value">Full Load</span></div>
+        <div class="detail-row"><span class="detail-row-label">Weight</span><span class="detail-row-value">2,450 kg</span></div>
+        <div class="detail-row"><span class="detail-row-label">No. of Packages</span><span class="detail-row-value">15</span></div>
+      </div>
+      <div class="detail-card">
+        <div class="detail-card-title">Payment Summary</div>
+        <div class="detail-row"><span class="detail-row-label">Total Amount</span><span class="detail-row-value">₹18,500</span></div>
+        <div class="detail-row"><span class="detail-row-label">Freight</span><span class="detail-row-value">₹15,000</span></div>
+        <div class="detail-row"><span class="detail-row-label">Loading Charges</span><span class="detail-row-value">₹1,500</span></div>
+        <div class="detail-row"><span class="detail-row-label">Unloading Charges</span><span class="detail-row-value">₹1,000</span></div>
+        <div class="detail-row"><span class="detail-row-label">Other Charges</span><span class="detail-row-value">₹1,000</span></div>
+        <div class="detail-row"><span class="detail-row-label">Status</span><span class="detail-row-value"><span class="badge badge-info">In Transit</span></span></div>
+      </div>
+    </div>
+
+    <!-- ===== PAGE DIVIDER ===== -->
+    <div class="page-divider"><span>↓ Lorry Receipt Detail ↓</span></div>
+
+    <!-- ===== LORRY RECEIPT DETAIL ===== -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <h1>Lorry Receipt — LOR-2026-0089</h1>
+        <p>Truck: MH-04-AB-1234 · Mumbai → Delhi</p>
+      </div>
+      <div class="topbar-right">
+        <button class="btn btn-outline">📄 Download PDF</button>
+      </div>
+    </div>
+
+    <div class="detail-grid">
+      <div class="detail-card">
+        <div class="detail-card-title">Section A — Vehicle & Party</div>
+        <div class="detail-row"><span class="detail-row-label">Lorry No</span><span class="detail-row-value">MH-04-AB-1234</span></div>
+        <div class="detail-row"><span class="detail-row-label">Contract No</span><span class="detail-row-value">CN-2026-0456</span></div>
+        <div class="detail-row"><span class="detail-row-label">Owner</span><span class="detail-row-value">Patel Transport</span></div>
+        <div class="detail-row"><span class="detail-row-label">Driver</span><span class="detail-row-value">Ramesh Kumar</span></div>
+        <div class="detail-row"><span class="detail-row-label">Broker</span><span class="detail-row-value">—</span></div>
+        <div class="detail-row"><span class="detail-row-label">From → To</span><span class="detail-row-value">Mumbai → Delhi</span></div>
+      </div>
+      <div class="detail-card">
+        <div class="detail-card-title">Section B — Consignment</div>
+        <div class="detail-row"><span class="detail-row-label">Received No. of Bilties</span><span class="detail-row-value">LR-2026-0148, LR-2026-0147</span></div>
+        <div class="detail-row"><span class="detail-row-label">Total Weight</span><span class="detail-row-value">4,820 kg</span></div>
+        <div class="detail-row"><span class="detail-row-label">No. of Packages</span><span class="detail-row-value">28</span></div>
+        <div class="detail-row"><span class="detail-row-label">Dispatch Date</span><span class="detail-row-value">15 Sep 2026</span></div>
+      </div>
+    </div>
+
+    <div class="detail-grid">
+      <div class="detail-card">
+        <div class="detail-card-title">Section C — Advance Payment</div>
+        <div class="detail-row"><span class="detail-row-label">Advance Amount</span><span class="detail-row-value amount-negative">₹8,000</span></div>
+        <div class="detail-row"><span class="detail-row-label">Paid To</span><span class="detail-row-value">Owner</span></div>
+        <div class="detail-row"><span class="detail-row-label">Payment Mode</span><span class="detail-row-value">Cash</span></div>
+        <div class="detail-row"><span class="detail-row-label">Date</span><span class="detail-row-value">15 Sep 2026</span></div>
+      </div>
+      <div class="detail-card">
+        <div class="detail-card-title">Section E — Final Payment</div>
+        <div class="detail-row"><span class="detail-row-label">Net Amount Payable</span><span class="detail-row-value amount-negative">₹7,500</span></div>
+        <div class="detail-row"><span class="detail-row-label">Detention Amount</span><span class="detail-row-value">₹500</span></div>
+        <div class="detail-row"><span class="detail-row-label">Extra Hire</span><span class="detail-row-value">₹0</span></div>
+        <div class="detail-row"><span class="detail-row-label">Less Deductions</span><span class="detail-row-value amount-positive">₹0</span></div>
+        <div class="detail-row"><span class="detail-row-label">Status</span><span class="detail-row-value"><span class="badge badge-warning">Pending</span></span></div>
+      </div>
+    </div>
+
+    <!-- ===== PAGE DIVIDER ===== -->
+    <div class="page-divider"><span>↓ Quotation / Estimate Detail ↓</span></div>
+
+    <!-- ===== QUOTATION DETAIL ===== -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <h1>Quotation — EST-2026-0034</h1>
+        <p>Mumbai → Delhi · Valid until 30 Sep 2026</p>
+      </div>
+      <div class="topbar-right">
+        <button class="btn btn-outline">📄 Download PDF</button>
+        <button class="btn btn-primary">✓ Accept</button>
+        <button class="btn btn-outline" style="color:var(--danger);border-color:var(--danger);">✕ Reject</button>
+      </div>
+    </div>
+
+    <div class="detail-grid">
+      <div class="detail-card">
+        <div class="detail-card-title">Quotation Summary</div>
+        <div class="detail-row"><span class="detail-row-label">Estimate No</span><span class="detail-row-value">EST-2026-0034</span></div>
+        <div class="detail-row"><span class="detail-row-label">Date</span><span class="detail-row-value">14 Sep 2026</span></div>
+        <div class="detail-row"><span class="detail-row-label">Valid Until</span><span class="detail-row-value">30 Sep 2026</span></div>
+        <div class="detail-row"><span class="detail-row-label">Status</span><span class="detail-row-value"><span class="badge badge-info">Sent</span></span></div>
+        <div class="detail-row"><span class="detail-row-label">Total Amount</span><span class="detail-row-value">₹22,500</span></div>
+      </div>
+      <div class="detail-card">
+        <div class="detail-card-title">Route Summary</div>
+        <div class="detail-row"><span class="detail-row-label">Origin</span><span class="detail-row-value">Mumbai</span></div>
+        <div class="detail-row"><span class="detail-row-label">Destination</span><span class="detail-row-value">Delhi</span></div>
+        <div class="detail-row"><span class="detail-row-label">Distance</span><span class="detail-row-value">1,416 km</span></div>
+        <div class="detail-row"><span class="detail-row-label">Stations</span><span class="detail-row-value">3 stops</span></div>
+      </div>
+    </div>
+
+    <div class="table-card" style="margin-bottom: 28px;">
+      <div class="table-card-header">
+        <div class="table-card-title">Station-wise Rate Breakdown</div>
+      </div>
+      <table class="quotation-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Station</th>
+            <th>Capacity</th>
+            <th>Rate (₹)</th>
+            <th>Subtotal</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td>Mumbai (Origin)</td>
+            <td>9 ft</td>
+            <td>₹8,000</td>
+            <td>₹8,000</td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td>Vadodara (Transit)</td>
+            <td>9 ft</td>
+            <td>₹4,500</td>
+            <td>₹4,500</td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td>Delhi (Destination)</td>
+            <td>9 ft</td>
+            <td>₹10,000</td>
+            <td>₹10,000</td>
+          </tr>
+          <tr style="font-weight: 600; background: var(--surface-secondary);">
+            <td colspan="4" style="text-align: right;">Total</td>
+            <td style="color: var(--heading);">₹22,500</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ===== PAGE DIVIDER ===== -->
+    <div class="page-divider"><span>↓ Warehouse Items List ↓</span></div>
+
+    <!-- ===== WAREHOUSE ITEMS ===== -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <h1>Warehouse — Goods Status</h1>
+        <p>Track your goods stored in our warehouse</p>
+      </div>
+    </div>
+
+    <div class="filter-bar">
+      <select class="filter-input">
+        <option>All Status</option>
+        <option>Stored</option>
+        <option>Picked for Consolidation</option>
+        <option>Loaded on Vehicle</option>
+        <option>In Transit</option>
+        <option>Delivered</option>
+      </select>
+      <select class="filter-input">
+        <option>All Destinations</option>
+        <option>Delhi</option>
+        <option>Bangalore</option>
+        <option>Jaipur</option>
+      </select>
+      <input type="text" class="filter-input" placeholder="Search LR number...">
+    </div>
+
+    <div class="table-card" style="margin-bottom: 28px;">
+      <table>
+        <thead>
+          <tr>
+            <th>LR No</th>
+            <th>Destination</th>
+            <th>Weight</th>
+            <th>Load Type</th>
+            <th>Received</th>
+            <th>Days</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><a href="#" class="table-link">LR-2026-0147</a></td>
+            <td>Bangalore</td>
+            <td>1,200 kg</td>
+            <td><span class="badge badge-muted">Part Load</span></td>
+            <td>14 Sep</td>
+            <td>2</td>
+            <td><span class="badge badge-warning">Stored</span></td>
+          </tr>
+          <tr>
+            <td><a href="#" class="table-link">LR-2026-0143</a></td>
+            <td>Guwahati</td>
+            <td>3,500 kg</td>
+            <td><span class="badge badge-info">Full Load</span></td>
+            <td>11 Sep</td>
+            <td>5</td>
+            <td><span class="badge badge-purple">Picked</span></td>
+          </tr>
+          <tr>
+            <td><a href="#" class="table-link">LR-2026-0141</a></td>
+            <td>Jaipur</td>
+            <td>800 kg</td>
+            <td><span class="badge badge-muted">Part Load</span></td>
+            <td>08 Sep</td>
+            <td>8</td>
+            <td><span class="badge badge-danger">Overdue</span></td>
+          </tr>
+          <tr>
+            <td><a href="#" class="table-link">LR-2026-0139</a></td>
+            <td>Delhi</td>
+            <td>2,450 kg</td>
+            <td><span class="badge badge-info">Full Load</span></td>
+            <td>13 Sep</td>
+            <td>3</td>
+            <td><span class="badge badge-info">Loaded</span></td>
+          </tr>
+          <tr>
+            <td><a href="#" class="table-link">LR-2026-0138</a></td>
+            <td>Pune</td>
+            <td>600 kg</td>
+            <td><span class="badge badge-muted">Part Load</span></td>
+            <td>15 Sep</td>
+            <td>1</td>
+            <td><span class="badge badge-warning">Stored</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ===== PAGE DIVIDER ===== -->
+    <div class="page-divider"><span>↓ Load Trips (Truck Dispatch) ↓</span></div>
+
+    <!-- ===== LOAD TRIPS ===== -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <h1>Load Trips — Truck Dispatch Tracking</h1>
+        <p>Real-time status of your dispatched shipments</p>
+      </div>
+    </div>
+
+    <div class="table-card" style="margin-bottom: 28px;">
+      <table>
+        <thead>
+          <tr>
+            <th>Trip No</th>
+            <th>Truck</th>
+            <th>Driver</th>
+            <th>Route</th>
+            <th>Dispatched</th>
+            <th>ETA</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><a href="#" class="table-link">LT-0042</a></td>
+            <td>MH-04-AB-1234</td>
+            <td>Ramesh Kumar</td>
+            <td>Mumbai → Delhi</td>
+            <td>15 Sep, 6:30 AM</td>
+            <td>16 Sep, 6:00 PM</td>
+            <td><span class="badge badge-info">In Transit</span></td>
+          </tr>
+          <tr>
+            <td><a href="#" class="table-link">LT-0041</a></td>
+            <td>KL-07-CD-5678</td>
+            <td>Suresh Singh</td>
+            <td>Chennai → Bangalore</td>
+            <td>14 Sep, 8:00 AM</td>
+            <td>14 Sep, 8:00 PM</td>
+            <td><span class="badge badge-success">Delivered</span></td>
+          </tr>
+          <tr>
+            <td><a href="#" class="table-link">LT-0040</a></td>
+            <td>RJ-14-EF-9012</td>
+            <td>Mahesh Yadav</td>
+            <td>Delhi → Jaipur</td>
+            <td>13 Sep, 7:00 AM</td>
+            <td>13 Sep, 2:00 PM</td>
+            <td><span class="badge badge-success">Delivered</span></td>
+          </tr>
+          <tr>
+            <td><a href="#" class="table-link">LT-0043</a></td>
+            <td>GJ-01-GH-3456</td>
+            <td>Patel Jay</td>
+            <td>Mumbai → Ahmedabad</td>
+            <td>—</td>
+            <td>—</td>
+            <td><span class="badge badge-muted">Planned</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ===== PAGE DIVIDER ===== -->
+    <div class="page-divider"><span>↓ Office Invoice (Invoice Receipt) Detail ↓</span></div>
+
+    <!-- ===== OFFICE INVOICE DETAIL ===== -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <h1>Office Invoice — INV-2026-0067</h1>
+        <p>Linked to LR Receipt: LR-2026-0148</p>
+      </div>
+      <div class="topbar-right">
+        <button class="btn btn-outline">📄 Download PDF</button>
+      </div>
+    </div>
+
+    <div class="detail-grid">
+      <div class="detail-card">
+        <div class="detail-card-title">Invoice Details</div>
+        <div class="detail-row"><span class="detail-row-label">Invoice No</span><span class="detail-row-value">INV-2026-0067</span></div>
+        <div class="detail-row"><span class="detail-row-label">Date</span><span class="detail-row-value">15 Sep 2026</span></div>
+        <div class="detail-row"><span class="detail-row-label">Linked LR</span><span class="detail-row-value"><a href="#" class="table-link">LR-2026-0148</a></span></div>
+        <div class="detail-row"><span class="detail-row-label">Route</span><span class="detail-row-value">Mumbai → Delhi</span></div>
+        <div class="detail-row"><span class="detail-row-label">Status</span><span class="detail-row-value"><span class="badge badge-warning">Partially Paid</span></span></div>
+      </div>
+      <div class="detail-card">
+        <div class="detail-card-title">Amount Summary</div>
+        <div class="detail-row"><span class="detail-row-label">Amount Debit (Billed)</span><span class="detail-row-value amount-negative">₹18,500</span></div>
+        <div class="detail-row"><span class="detail-row-label">Amount Credit (Received)</span><span class="detail-row-value amount-positive">₹10,000</span></div>
+        <div class="detail-row"><span class="detail-row-label">Due Amount</span><span class="detail-row-value amount-negative">₹8,500</span></div>
+        <div class="detail-row"><span class="detail-row-label">Debit Date</span><span class="detail-row-value">15 Sep 2026</span></div>
+        <div class="detail-row"><span class="detail-row-label">Credit Date</span><span class="detail-row-value">15 Sep 2026</span></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+  function toggleTheme() {
+    const body = document.body;
+    const current = body.getAttribute('data-theme');
+    body.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
+  }
+</script>
+
+</body>
+</html>

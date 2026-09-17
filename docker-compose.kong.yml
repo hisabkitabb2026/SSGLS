@@ -1,0 +1,346 @@
+version: '3.8'
+
+##############################################################################
+# Kong API Gateway Stack
+# Includes Kong, PostgreSQL, Redis, Prometheus, and supporting services
+##############################################################################
+
+services:
+  ##############################################################################
+  # Kong Database (PostgreSQL)
+  ##############################################################################
+  kong-db:
+    image: postgres:15-alpine
+    container_name: invoiceshelf-kong-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: kong
+      POSTGRES_USER: kong
+      POSTGRES_PASSWORD: kong_password
+    volumes:
+      - kong-db-data:/var/lib/postgresql/data
+    networks:
+      - invoiceshelf-network
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kong"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    labels:
+      - "com.example.description=Kong Database"
+
+  ##############################################################################
+  # Kong API Gateway - Migrations & Setup
+  ##############################################################################
+  kong-migrations:
+    image: kong:3.4-alpine
+    container_name: invoiceshelf-kong-migrations
+    command: kong migrations bootstrap
+    depends_on:
+      kong-db:
+        condition: service_healthy
+    networks:
+      - invoiceshelf-network
+    environment:
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: kong-db
+      KONG_PG_PORT: 5432
+      KONG_PG_USER: kong
+      KONG_PG_PASSWORD: kong_password
+      KONG_PG_DATABASE: kong
+    restart: on-failure
+
+  ##############################################################################
+  # Kong API Gateway - Main
+  ##############################################################################
+  kong:
+    image: kong:3.4-alpine
+    container_name: invoiceshelf-kong
+    restart: unless-stopped
+    depends_on:
+      kong-db:
+        condition: service_healthy
+      kong-migrations:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    networks:
+      - invoiceshelf-network
+    ports:
+      - "8000:8000"  # HTTP proxy
+      - "8443:8443"  # HTTPS proxy
+      - "8001:8001"  # Admin API HTTP
+      - "8444:8444"  # Admin API HTTPS
+      - "8002:8002"  # Admin GUI
+      - "7946:7946"  # Cluster
+    environment:
+      # Database Configuration
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: kong-db
+      KONG_PG_PORT: 5432
+      KONG_PG_USER: kong
+      KONG_PG_PASSWORD: kong_password
+      KONG_PG_DATABASE: kong
+
+      # Server Configuration
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001, 0.0.0.0:8444 ssl
+      KONG_PROXY_LISTEN: 0.0.0.0:8000, 0.0.0.0:8443 ssl
+      KONG_STREAM_LISTEN: off
+
+      # SSL/TLS Configuration
+      KONG_SSL_CERT: /etc/kong/certs/proxy.crt
+      KONG_SSL_CERT_KEY: /etc/kong/certs/proxy.key
+      KONG_ADMIN_SSL_CERT: /etc/kong/certs/admin.crt
+      KONG_ADMIN_SSL_CERT_KEY: /etc/kong/certs/admin.key
+      KONG_SSL_PROTOCOLS: TLSv1.2 TLSv1.3
+
+      # Performance
+      KONG_WORKER_PROCESSES: auto
+      KONG_WORKER_CONNECTIONS: 10000
+      KONG_WORKER_MAX_BODY_SIZE: 10m
+      KONG_CLIENT_MAX_BODY_SIZE: 10m
+
+      # Admin API
+      KONG_ADMIN_GUI_URL: http://localhost:8002
+      KONG_ADMIN_GUI_AUTH: basic-auth
+
+      # Logging
+      KONG_LOG_LEVEL: info
+      KONG_PROXY_ACCESS_LOG: /var/log/kong/access.log
+      KONG_PROXY_ERROR_LOG: /var/log/kong/error.log
+      KONG_ADMIN_ACCESS_LOG: /var/log/kong/admin_access.log
+      KONG_ADMIN_ERROR_LOG: /var/log/kong/admin_error.log
+
+      # Plugins
+      KONG_PLUGINS: bundled,jwt,rate-limiting,cors,proxy-cache,key-auth,acl,oauth2,datadog,prometheus
+
+      # DNS
+      KONG_DNS_RESOLVER: 127.0.0.11
+      KONG_DNS_ORDER: LAST,SRV,A,CNAME
+
+      # Monitoring
+      KONG_STATUS_LISTEN: 0.0.0.0:8100
+    volumes:
+      - ./kong.conf:/etc/kong/kong.conf:ro
+      - ./kong-certs:/etc/kong/certs:ro
+      - kong-logs:/var/log/kong
+    healthcheck:
+      test: ["CMD", "kong", "health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    labels:
+      - "com.example.description=Kong API Gateway"
+
+  ##############################################################################
+  # Redis - Rate Limiting & Caching
+  ##############################################################################
+  redis:
+    image: redis:7-alpine
+    container_name: invoiceshelf-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass redis_password
+    volumes:
+      - redis-data:/data
+    networks:
+      - invoiceshelf-network
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    labels:
+      - "com.example.description=Redis Cache & Rate Limit Store"
+
+  ##############################################################################
+  # Kong Admin GUI (Konga - Optional Web UI)
+  ##############################################################################
+  konga:
+    image: pantsel/konga:next
+    container_name: invoiceshelf-konga
+    restart: unless-stopped
+    depends_on:
+      - kong
+    networks:
+      - invoiceshelf-network
+    ports:
+      - "1337:1337"
+    environment:
+      NODE_ENV: production
+      DB_ADAPTER: postgres
+      DB_HOST: kong-db
+      DB_PORT: 5432
+      DB_USER: kong
+      DB_PASSWORD: kong_password
+      DB_DATABASE: konga
+      KONG_ADMIN_URL: http://kong:8001
+      NODE_LOG_LEVEL: info
+      TRUST_PROXY: true
+    volumes:
+      - konga-data:/app/kongadata
+    labels:
+      - "com.example.description=Kong Admin Dashboard UI"
+
+  ##############################################################################
+  # Prometheus - Metrics Collection
+  ##############################################################################
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: invoiceshelf-prometheus
+    restart: unless-stopped
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    networks:
+      - invoiceshelf-network
+    ports:
+      - "9090:9090"
+    labels:
+      - "com.example.description=Prometheus Metrics Server"
+
+  ##############################################################################
+  # Grafana - Metrics Visualization
+  ##############################################################################
+  grafana:
+    image: grafana/grafana:latest
+    container_name: invoiceshelf-grafana
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin_password
+      GF_INSTALL_PLUGINS: grafana-piechart-panel
+      GF_PATHS_PROVISIONING: /etc/grafana/provisioning
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana-dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+    networks:
+      - invoiceshelf-network
+    ports:
+      - "3000:3000"
+    labels:
+      - "com.example.description=Grafana Visualization Dashboard"
+
+  ##############################################################################
+  # Jaeger - Distributed Tracing (Optional)
+  ##############################################################################
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: invoiceshelf-jaeger
+    restart: unless-stopped
+    networks:
+      - invoiceshelf-network
+    ports:
+      - "16686:16686"  # Web UI
+      - "6831:6831/udp"  # Agent compact thrift
+      - "6832:6832/udp"  # Agent compact thrift
+      - "5778:5778"     # Agent serve configs
+      - "14268:14268"   # Collector HTTP
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    labels:
+      - "com.example.description=Jaeger Distributed Tracing"
+
+  ##############################################################################
+  # Logging Service - Log Aggregation (ELK Stack)
+  ##############################################################################
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.5.0
+    container_name: invoiceshelf-elasticsearch
+    restart: unless-stopped
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: -Xms512m -Xmx512m
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    networks:
+      - invoiceshelf-network
+    ports:
+      - "9200:9200"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200 >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    labels:
+      - "com.example.description=Elasticsearch Logging"
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.5.0
+    container_name: invoiceshelf-kibana
+    restart: unless-stopped
+    depends_on:
+      - elasticsearch
+    environment:
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+      XPACK_SECURITY_ENABLED: "false"
+    networks:
+      - invoiceshelf-network
+    ports:
+      - "5601:5601"
+    labels:
+      - "com.example.description=Kibana Visualization"
+
+  ##############################################################################
+  # API Documentation Service
+  ##############################################################################
+  swagger-ui:
+    image: swaggerapi/swagger-ui:latest
+    container_name: invoiceshelf-swagger-ui
+    restart: unless-stopped
+    environment:
+      URLS: '[{"url":"http://kong:8001/api","name":"Kong Admin API"},{"url":"http://invoiceshelf.test:8000","name":"Kong Proxy API"}]'
+      URLS_PRIMARY_NAME: Kong Admin API
+    networks:
+      - invoiceshelf-network
+    ports:
+      - "8004:8080"
+    labels:
+      - "com.example.description=Swagger API Documentation UI"
+
+  ##############################################################################
+  # Health Check Service (Mock)
+  ##############################################################################
+  health-check-service:
+    image: nginx:alpine
+    container_name: invoiceshelf-health-check
+    restart: unless-stopped
+    networks:
+      - invoiceshelf-network
+    ports:
+      - "8100:80"
+    volumes:
+      - ./health-check.html:/usr/share/nginx/html/index.html:ro
+    labels:
+      - "com.example.description=Health Check Service"
+
+networks:
+  invoiceshelf-network:
+    driver: bridge
+
+volumes:
+  kong-db-data:
+    driver: local
+  redis-data:
+    driver: local
+  konga-data:
+    driver: local
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+  elasticsearch-data:
+    driver: local

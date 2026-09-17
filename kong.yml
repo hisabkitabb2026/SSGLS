@@ -1,0 +1,721 @@
+###############################################################################
+# Kong API Gateway Configuration
+# Complete declarative configuration for InvoiceShelf microservices
+# DDD-based architecture with 6 microservices
+###############################################################################
+
+_format_version: "3.0"
+_transform: true
+
+###############################################################################
+# Services Definition (6 DDD Microservices)
+###############################################################################
+services:
+  # 1. Invoice Domain Service (8001)
+  - name: invoice-service
+    url: http://invoice-service:8001
+    protocol: http
+    host: invoice-service
+    port: 8001
+    path: /api/v1
+    tags:
+      - domain:invoice
+      - ddd
+    connect_timeout: 6000
+    write_timeout: 60000
+    read_timeout: 60000
+    retries: 3
+    enabled: true
+    routes:
+      - name: invoice-list
+        paths:
+          - /api/v1/invoices
+        methods: ["GET"]
+        tags: [domain:invoice, list]
+      - name: invoice-create
+        paths:
+          - /api/v1/invoices
+        methods: ["POST"]
+        tags: [domain:invoice, create]
+      - name: invoice-detail
+        paths:
+          - /api/v1/invoices/(?<id>[0-9]+)
+        regex_priority: 10
+        methods: ["GET"]
+        tags: [domain:invoice, detail]
+      - name: invoice-update
+        paths:
+          - /api/v1/invoices/(?<id>[0-9]+)
+        regex_priority: 10
+        methods: ["PUT", "PATCH"]
+        tags: [domain:invoice, update]
+      - name: invoice-delete
+        paths:
+          - /api/v1/invoices/(?<id>[0-9]+)
+        regex_priority: 10
+        methods: ["DELETE"]
+        tags: [domain:invoice, delete]
+      - name: invoice-pdf
+        paths:
+          - /api/v1/invoices/(?<id>[0-9]+)/pdf
+        regex_priority: 15
+        methods: ["GET", "POST"]
+        tags: [domain:invoice, pdf]
+
+  # 2. Expense/Product Domain Service (8002)
+  - name: expense-service
+    url: http://expense-service:8002
+    protocol: http
+    host: expense-service
+    port: 8002
+    path: /api/v1
+    tags:
+      - domain:expense
+      - ddd
+    connect_timeout: 6000
+    write_timeout: 60000
+    read_timeout: 60000
+    retries: 3
+    enabled: true
+    routes:
+      - name: expense-list
+        paths:
+          - /api/v1/expenses
+        methods: ["GET"]
+        tags: [domain:expense, list]
+      - name: expense-create
+        paths:
+          - /api/v1/expenses
+        methods: ["POST"]
+        tags: [domain:expense, create]
+      - name: expense-detail
+        paths:
+          - /api/v1/expenses/(?<id>[0-9]+)
+        regex_priority: 10
+        methods: ["GET"]
+        tags: [domain:expense, detail]
+      - name: expense-update
+        paths:
+          - /api/v1/expenses/(?<id>[0-9]+)
+        regex_priority: 10
+        methods: ["PUT", "PATCH"]
+        tags: [domain:expense, update]
+      - name: expense-delete
+        paths:
+          - /api/v1/expenses/(?<id>[0-9]+)
+        regex_priority: 10
+        methods: ["DELETE"]
+        tags: [domain:expense, delete]
+
+  # 3. Product Catalog Service (8003)
+  - name: product-service
+    url: http://product-service:8003
+    protocol: http
+    host: product-service
+    port: 8003
+    path: /api/v1
+    tags:
+      - domain:product
+      - ddd
+    connect_timeout: 6000
+    write_timeout: 60000
+    read_timeout: 60000
+    retries: 3
+    enabled: true
+    routes:
+      - name: product-list
+        paths:
+          - /api/v1/products
+        methods: ["GET"]
+        tags: [domain:product, list]
+      - name: product-create
+        paths:
+          - /api/v1/products
+        methods: ["POST"]
+        tags: [domain:product, create]
+      - name: product-detail
+        paths:
+          - /api/v1/products/(?<id>[0-9]+)
+        regex_priority: 10
+        methods: ["GET"]
+        tags: [domain:product, detail]
+      - name: product-update
+        paths:
+          - /api/v1/products/(?<id>[0-9]+)
+        regex_priority: 10
+        methods: ["PUT", "PATCH"]
+        tags: [domain:product, update]
+      - name: product-delete
+        paths:
+          - /api/v1/products/(?<id>[0-9]+)
+        regex_priority: 10
+        methods: ["DELETE"]
+        tags: [domain:product, delete]
+
+  # 4. Customer Portal Service (8004)
+  - name: customer-service
+    url: http://customer-service:8004
+    protocol: http
+    host: customer-service
+    port: 8004
+    path: /api/v1
+    tags:
+      - domain:customer
+      - ddd
+    connect_timeout: 6000
+    write_timeout: 60000
+    read_timeout: 60000
+    retries: 3
+    enabled: true
+    routes:
+      - name: customer-list
+        paths:
+          - /api/v1/customers
+        methods: ["GET"]
+        tags: [domain:customer, list]
+      - name: customer-create
+        paths:
+          - /api/v1/customers
+        methods: ["POST"]
+        tags: [domain:customer, create]
+      - name: customer-detail
+        paths:
+          - /api/v1/customers/(?<id>[0-9]+)
+        regex_priority: 10
+        methods: ["GET"]
+        tags: [domain:customer, detail]
+      - name: customer-update
+        paths:
+          - /api/v1/customers/(?<id>[0-9]+)
+        regex_priority: 10
+        methods: ["PUT", "PATCH"]
+        tags: [domain:customer, update]
+      - name: customer-delete
+        paths:
+          - /api/v1/customers/(?<id>[0-9]+)
+        regex_priority: 10
+        methods: ["DELETE"]
+        tags: [domain:customer, delete]
+      - name: customer-portal
+        paths:
+          - /portal/(?<slug>[a-zA-Z0-9_-]+)(/.*)?
+        regex_priority: 10
+        methods: ["GET", "POST"]
+        tags: [domain:customer, portal]
+
+  # 5. Settings/Configuration Service (8005)
+  - name: settings-service
+    url: http://settings-service:8005
+    protocol: http
+    host: settings-service
+    port: 8005
+    path: /api/v1
+    tags:
+      - domain:settings
+      - ddd
+    connect_timeout: 6000
+    write_timeout: 60000
+    read_timeout: 60000
+    retries: 3
+    enabled: true
+    routes:
+      - name: settings-list
+        paths:
+          - /api/v1/settings
+        methods: ["GET"]
+        tags: [domain:settings, list]
+      - name: settings-update
+        paths:
+          - /api/v1/settings
+        methods: ["PUT", "PATCH"]
+        tags: [domain:settings, update]
+      - name: settings-detail
+        paths:
+          - /api/v1/settings/(?<key>[a-zA-Z0-9_-]+)
+        regex_priority: 10
+        methods: ["GET"]
+        tags: [domain:settings, detail]
+      - name: admin-settings
+        paths:
+          - /api/v1/admin/settings(/.*)?
+        regex_priority: 10
+        methods: ["GET", "PUT", "PATCH"]
+        tags: [domain:admin, settings]
+
+  # 6. Transport/Logistics Service (8006)
+  - name: transport-service
+    url: http://transport-service:8006
+    protocol: http
+    host: transport-service
+    port: 8006
+    path: /api/v1
+    tags:
+      - domain:transport
+      - ddd
+    connect_timeout: 6000
+    write_timeout: 60000
+    read_timeout: 60000
+    retries: 3
+    enabled: true
+    routes:
+      - name: transport-list
+        paths:
+          - /api/v1/transport
+        methods: ["GET"]
+        tags: [domain:transport, list]
+      - name: transport-create
+        paths:
+          - /api/v1/transport
+        methods: ["POST"]
+        tags: [domain:transport, create]
+      - name: transport-detail
+        paths:
+          - /api/v1/transport/(?<id>[0-9]+)
+        regex_priority: 10
+        methods: ["GET"]
+        tags: [domain:transport, detail]
+      - name: transport-update
+        paths:
+          - /api/v1/transport/(?<id>[0-9]+)
+        regex_priority: 10
+        methods: ["PUT", "PATCH"]
+        tags: [domain:transport, update]
+      - name: transport-delete
+        paths:
+          - /api/v1/transport/(?<id>[0-9]+)
+        regex_priority: 10
+        methods: ["DELETE"]
+        tags: [domain:transport, delete]
+
+  # Health Check Service (shared)
+  - name: health-service
+    url: http://app:9000
+    protocol: http
+    host: app
+    port: 9000
+    path: /health
+    tags:
+      - health-check
+      - monitoring
+    connect_timeout: 5000
+    write_timeout: 30000
+    read_timeout: 30000
+    retries: 5
+    enabled: true
+    routes:
+      - name: health-check
+        paths:
+          - /health
+          - /ping
+        methods: ["GET"]
+        tags: [health-check]
+      - name: health-readiness
+        paths:
+          - /health/ready
+        methods: ["GET"]
+        tags: [health-check]
+      - name: health-liveness
+        paths:
+          - /health/live
+        methods: ["GET"]
+        tags: [health-check]
+
+  # Frontend SPA Service
+  - name: web-service
+    url: http://app:9000
+    protocol: http
+    host: app
+    port: 9000
+    path: /
+    tags:
+      - web
+      - frontend
+    connect_timeout: 6000
+    write_timeout: 60000
+    read_timeout: 60000
+    retries: 3
+    enabled: true
+    routes:
+      - name: web-catchall
+        paths:
+          - /
+        regex_priority: 0
+        tags: [web, fallback]
+
+###############################################################################
+# Global Plugins (applies to all routes/services)
+###############################################################################
+plugins:
+  # CORS Plugin - Enable cross-origin requests
+  - name: cors
+    config:
+      origins:
+        - http://invoiceshelf.test
+        - http://localhost:5173
+        - http://localhost:3000
+        - http://localhost:8080
+        - https://invoiceshelf.test
+        - https://localhost:5173
+        - https://app.invoiceshelf.local
+      methods:
+        - GET
+        - HEAD
+        - PUT
+        - PATCH
+        - POST
+        - DELETE
+        - OPTIONS
+      headers:
+        - Accept
+        - Accept-Version
+        - Content-Length
+        - Content-MD5
+        - Content-Type
+        - Date
+        - X-Auth-Token
+        - X-API-Key
+        - X-Company-ID
+        - Authorization
+        - X-Requested-With
+        - X-Trace-ID
+        - X-Request-ID
+      exposed_headers:
+        - X-Auth-Token
+        - X-RateLimit-Limit
+        - X-RateLimit-Remaining
+        - X-RateLimit-Reset
+        - X-Request-ID
+        - X-Trace-ID
+        - Content-Type
+      credentials: true
+      max_age: 3600
+      preflight_continue: false
+
+  # Trace ID Injection - Add distributed tracing headers
+  - name: request-transformer
+    config:
+      add:
+        headers:
+          - X-Kong-Request-Time:$msec
+          - X-Request-ID:$request_id
+      add_if_not_exists:
+        headers:
+          - X-Trace-ID:$http_x_trace_id
+
+  # Response Transformer - Add custom headers
+  - name: response-transformer
+    config:
+      add:
+        headers:
+          - X-API-Version:v1
+          - X-Powered-By:InvoiceShelf
+          - X-Request-ID:$request_id
+      remove:
+        headers:
+          - Server
+
+  # Bot Detection
+  - name: bot-detection
+    config:
+      whitelist: []
+      blacklist: []
+      denylist:
+        - "bot"
+        - "crawler"
+        - "spider"
+      allow_crawlers: false
+
+  # Prometheus Metrics
+  - name: prometheus
+    config:
+      prefix: kong
+      return_all_metrics: true
+      metrics:
+        - request_count
+        - latency
+        - status_count
+        - unique_users
+        - request_per_user
+        - upstream_latency
+        - request_size
+        - response_size
+
+###############################################################################
+# Service-specific Plugins
+###############################################################################
+  # JWT Authentication for API Services
+  - name: jwt
+    service: invoice-service
+    config:
+      key_claim_name: iss
+      secret_is_base64: false
+      uri_param_names:
+        - jwt
+      cookie_names:
+        - jwt
+        - auth_token
+      claims_to_verify:
+        - exp
+        - nbf
+      algorithms:
+        - HS256
+        - HS512
+        - RS256
+      audience: invoiceshelf-api
+
+  - name: jwt
+    service: expense-service
+    config:
+      key_claim_name: iss
+      secret_is_base64: false
+      uri_param_names:
+        - jwt
+      cookie_names:
+        - jwt
+        - auth_token
+      claims_to_verify:
+        - exp
+        - nbf
+      algorithms:
+        - HS256
+        - HS512
+        - RS256
+      audience: invoiceshelf-api
+
+  - name: jwt
+    service: product-service
+    config:
+      key_claim_name: iss
+      secret_is_base64: false
+      uri_param_names:
+        - jwt
+      cookie_names:
+        - jwt
+        - auth_token
+      claims_to_verify:
+        - exp
+        - nbf
+      algorithms:
+        - HS256
+        - HS512
+        - RS256
+      audience: invoiceshelf-api
+
+  - name: jwt
+    service: customer-service
+    config:
+      key_claim_name: iss
+      secret_is_base64: false
+      uri_param_names:
+        - jwt
+      cookie_names:
+        - jwt
+        - auth_token
+      claims_to_verify:
+        - exp
+        - nbf
+      algorithms:
+        - HS256
+        - HS512
+        - RS256
+      audience: invoiceshelf-api
+
+  - name: jwt
+    service: settings-service
+    config:
+      key_claim_name: iss
+      secret_is_base64: false
+      uri_param_names:
+        - jwt
+      cookie_names:
+        - jwt
+        - auth_token
+      claims_to_verify:
+        - exp
+        - nbf
+      algorithms:
+        - HS256
+        - HS512
+        - RS256
+      audience: invoiceshelf-api
+
+  - name: jwt
+    service: transport-service
+    config:
+      key_claim_name: iss
+      secret_is_base64: false
+      uri_param_names:
+        - jwt
+      cookie_names:
+        - jwt
+        - auth_token
+      claims_to_verify:
+        - exp
+        - nbf
+      algorithms:
+        - HS256
+        - HS512
+        - RS256
+      audience: invoiceshelf-api
+
+  # Rate Limiting - API Services (100 req/min per consumer)
+  - name: rate-limiting
+    service: invoice-service
+    config:
+      minute: 100
+      limit_by: consumer
+      policy: redis
+      fault_tolerant: true
+      redis_host: redis
+      redis_port: 6379
+      redis_database: 0
+
+  - name: rate-limiting
+    service: expense-service
+    config:
+      minute: 100
+      limit_by: consumer
+      policy: redis
+      fault_tolerant: true
+      redis_host: redis
+      redis_port: 6379
+      redis_database: 0
+
+  - name: rate-limiting
+    service: product-service
+    config:
+      minute: 100
+      limit_by: consumer
+      policy: redis
+      fault_tolerant: true
+      redis_host: redis
+      redis_port: 6379
+      redis_database: 0
+
+  - name: rate-limiting
+    service: customer-service
+    config:
+      minute: 100
+      limit_by: consumer
+      policy: redis
+      fault_tolerant: true
+      redis_host: redis
+      redis_port: 6379
+      redis_database: 0
+
+  - name: rate-limiting
+    service: settings-service
+    config:
+      minute: 100
+      limit_by: consumer
+      policy: redis
+      fault_tolerant: true
+      redis_host: redis
+      redis_port: 6379
+      redis_database: 0
+
+  - name: rate-limiting
+    service: transport-service
+    config:
+      minute: 100
+      limit_by: consumer
+      policy: redis
+      fault_tolerant: true
+      redis_host: redis
+      redis_port: 6379
+      redis_database: 0
+
+  # Rate Limiting - Health Check (high limit, IP-based)
+  - name: rate-limiting
+    service: health-service
+    config:
+      second: 100
+      limit_by: ip
+      policy: local
+      fault_tolerant: true
+
+  # HTTP Logging - Request/Response logging
+  - name: http-log
+    config:
+      http_endpoint: http://logging-aggregator:9000/logs
+      method: POST
+      timeout: 1000
+      keepalive: 60000
+      content_type: application/json
+      flush_timeout: 2
+      retry_count: 5
+
+  # Proxy Cache for GET requests (5 min TTL)
+  - name: proxy-cache
+    service: invoice-service
+    config:
+      content_type:
+        - application/json
+      cache_ttl: 300
+      strategy: memory
+      cache_control: true
+      vary_headers:
+        - X-Company-ID
+      vary_query_params:
+        - page
+        - limit
+        - sort
+        - filter
+
+  - name: proxy-cache
+    service: product-service
+    config:
+      content_type:
+        - application/json
+      cache_ttl: 300
+      strategy: memory
+      cache_control: true
+      vary_headers:
+        - X-Company-ID
+      vary_query_params:
+        - page
+        - limit
+        - sort
+
+  # Request Size Limiting (100MB for file uploads)
+  - name: request-size-limiting
+    service: invoice-service
+    config:
+      allowed_payload_size: 100
+      size_units: megabytes
+
+  - name: request-size-limiting
+    service: expense-service
+    config:
+      allowed_payload_size: 100
+      size_units: megabytes
+
+  - name: request-size-limiting
+    service: product-service
+    config:
+      allowed_payload_size: 100
+      size_units: megabytes
+
+###############################################################################
+# Consumers & API Keys (Optional - uncomment to enable)
+###############################################################################
+# consumers:
+#   - username: invoice-client
+#     custom_id: invoice-client-001
+#     tags: [service, invoice]
+#     credentials:
+#       - name: key-auth
+#         key_sets: invoice-client
+#         keys:
+#           - key: invoice-api-key-12345
+#           - key: invoice-api-key-67890
+#
+#   - username: admin-user
+#     custom_id: admin-001
+#     tags: [admin]
+#     acl_groups: [admin, super-admin]
+#     credentials:
+#       - name: key-auth
+#         key_sets: admin-keys
+#         keys:
+#           - key: admin-api-key-12345
